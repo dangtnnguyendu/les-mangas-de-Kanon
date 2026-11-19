@@ -9,13 +9,17 @@
   <title>Học Tiếng Pháp Qua Video - Song Ngữ</title>
   <style>
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-    body {
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #121212;
+      color: #eee;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    body {
       max-width: 960px;
       margin: 0 auto;
       padding: 12px 14px 48px;
-      background: #121212;
-      color: #eee;
     }
     .panel {
       background: #1e1e1e;
@@ -84,28 +88,43 @@
       position: fixed !important;
       top: 0; left: 0;
       width: 100vw !important;
-      height: 100dvh !important;
+      height: 100vh !important;
       z-index: 99999;
       border-radius: 0;
     }
 
-    /* Chế độ toàn màn hình tương thích Brave iPadOS: dùng sticky để vuốt lên là ẩn thanh URL Brave */
+    /* Chế độ toàn màn hình chuyên cho Brave iPadOS: tạo không gian cuộn 200vh để Brave tự ẩn thanh địa chỉ */
     body.brave-fs-body {
       max-width: 100vw !important;
       margin: 0 !important;
-      padding: 0 0 60vh 0 !important;
+      padding: 0 !important;
+      min-height: 200vh !important;
       background: #000 !important;
-      overflow-x: hidden;
     }
-    body.brave-fs-body > .panel {
+    body.brave-fs-body > .panel,
+    body.brave-fs-body > .ai-grid,
+    body.brave-fs-body > .transcript-box {
       display: none !important;
+    }
+    .brave-scroll-spacer {
+      display: none;
+      height: 140px;
+      background: #000;
+      color: #666;
+      font-size: 12px;
+      align-items: flex-end;
+      justify-content: center;
+      padding-bottom: 6px;
+    }
+    body.brave-fs-body .brave-scroll-spacer {
+      display: flex;
     }
     body.brave-fs-body .video-wrapper.pseudo-fs {
       position: sticky !important;
       top: 0 !important;
       left: 0 !important;
       width: 100vw !important;
-      height: 100dvh !important;
+      height: 100vh !important;
       aspect-ratio: auto !important;
       border-radius: 0 !important;
       z-index: 99999;
@@ -113,7 +132,7 @@
 
     video, #ytPlayer { width: 100%; height: 100%; display: block; }
 
-    /* --- CHẾ ĐỘ PHỤ ĐỀ 1: NẰM NGANG Ở ĐÁY VIDEO (MẶC ĐỊNH) --- */
+    /* --- CHẾ ĐỘ PHỤ ĐỀ 1: NẰM NGANG Ở ĐÁY VIDEO --- */
     .subtitle-overlay.mode-horizontal {
       position: absolute;
       bottom: 54px;
@@ -165,7 +184,6 @@
     }
     .subtitle-overlay.mode-vertical:empty { display: none; }
 
-    /* Khi phóng toàn màn hình: chiếm đúng 1/8 chiều rộng (12.5%) nằm bên phải */
     .video-wrapper.pseudo-fs .subtitle-overlay.mode-vertical,
     .video-wrapper:fullscreen .subtitle-overlay.mode-vertical,
     .video-wrapper:-webkit-full-screen .subtitle-overlay.mode-vertical {
@@ -184,9 +202,7 @@
       cursor: pointer;
       opacity: 0.65;
       border-left: 2px solid transparent;
-      transition: background 0.15s, opacity 0.15s;
     }
-    .v-sub-item:active { background: rgba(255, 255, 255, 0.12); }
     .v-sub-item.active {
       opacity: 1;
       background: rgba(255, 235, 59, 0.18);
@@ -229,7 +245,6 @@
       z-index: 25;
       display: flex;
       gap: 6px;
-      transition: right 0.2s;
     }
     .video-wrapper.has-vertical-sub .floating-controls {
       right: calc(17% + 16px);
@@ -247,26 +262,6 @@
       font-size: 12px;
       border-radius: 6px;
     }
-
-    /* Thông báo hướng dẫn vuốt ẩn thanh Brave */
-    .fs-hint-toast {
-      position: absolute;
-      top: 48px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(0, 0, 0, 0.82);
-      color: #ffeb3b;
-      border: 1px solid rgba(255, 235, 59, 0.4);
-      padding: 7px 14px;
-      border-radius: 20px;
-      font-size: 13px;
-      z-index: 30;
-      pointer-events: none;
-      opacity: 0;
-      transition: opacity 0.25s;
-      white-space: nowrap;
-    }
-    .fs-hint-toast.show { opacity: 1; }
 
     .transcript-box {
       margin-top: 14px;
@@ -287,7 +282,6 @@
       font-size: 15px;
       border-bottom: 1px solid #262626;
     }
-    .line:active, .line:hover { background: #2a2a2a; }
     .line.active { background: #332b00; }
     .line.active .line-fr { color: #ffeb3b; font-weight: 600; }
     .time { color: #888; min-width: 48px; font-family: monospace; padding-top: 2px; font-size: 13px; }
@@ -364,9 +358,11 @@
     </details>
   </div>
 
+  <!-- Vùng đệm kích hoạt cuộn ẩn thanh địa chỉ Brave -->
+  <div class="brave-scroll-spacer" id="braveSpacer">⬆ Vuốt lên tại đây để ẩn thanh địa chỉ Brave</div>
+
   <!-- KHUNG PHÁT VIDEO -->
   <div class="video-wrapper" id="videoWrapper">
-    <div id="fsHintToast" class="fs-hint-toast">⬆ Vuốt nhẹ từ dưới lên để ẩn thanh địa chỉ Brave</div>
     <div class="floating-controls">
       <button type="button" class="floating-btn" id="floatingLayoutBtn">📐 PĐ: Ngang</button>
       <button type="button" class="floating-btn" id="floatingFsBtn">⛶ Toàn màn hình</button>
@@ -429,12 +425,7 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
     const DB_KEY = 'unified_dataset';
     const LAYOUT_PREF_KEY = 'yt_fr_sub_layout_mode';
 
-    let dbState = {
-      updated_at: '',
-      skipped_ids: [],
-      watched_ids: [],
-      videos: []
-    };
+    let dbState = { updated_at: '', skipped_ids: [], watched_ids: [], videos: [] };
     let videoMap = {};
     let watchedSet = new Set();
 
@@ -460,7 +451,6 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
     const toggleLayoutBtn = document.getElementById('toggleLayoutBtn');
     const floatingLayoutBtn = document.getElementById('floatingLayoutBtn');
     const floatingFsBtn = document.getElementById('floatingFsBtn');
-    const fsHintToast = document.getElementById('fsHintToast');
 
     function openIDB() {
       return new Promise((resolve, reject) => {
@@ -502,27 +492,17 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
       };
       watchedSet = new Set(dbState.watched_ids);
       videoMap = {};
-
       const list = Array.isArray(raw?.videos) ? raw.videos : (Array.isArray(raw) ? raw : []);
-      list.forEach(item => {
-        if (item && item.id) {
-          videoMap[item.id] = item;
-        }
-      });
+      list.forEach(item => { if (item && item.id) videoMap[item.id] = item; });
       dbState.videos = Object.values(videoMap);
     }
 
-    // --- CHUYỂN ĐỔI KIỂU PHỤ ĐỀ: NGANG <-> DỌC ---
     function applyLayoutMode() {
       const isVert = subLayout === 'vertical';
-      subtitleOverlay.className = isVert
-        ? 'subtitle-overlay mode-vertical'
-        : 'subtitle-overlay mode-horizontal';
+      subtitleOverlay.className = isVert ? 'subtitle-overlay mode-vertical' : 'subtitle-overlay mode-horizontal';
       videoWrapper.classList.toggle('has-vertical-sub', isVert);
-
       toggleLayoutBtn.textContent = isVert ? '📐 Kiểu PĐ: Dọc' : '📐 Kiểu PĐ: Ngang';
       floatingLayoutBtn.textContent = isVert ? '📐 PĐ: Dọc' : '📐 PĐ: Ngang';
-
       renderOverlayStructure();
       activeIndex = -1;
       syncSubtitle(true);
@@ -542,26 +522,19 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
         subtitleOverlay.innerHTML = '<div id="subtitleBox" class="subtitle-box"></div>';
         return;
       }
-
       subtitleOverlay.innerHTML = '';
       if (!currentTranscript.length) return;
-
       currentTranscript.forEach((item, idx) => {
         const fr = item.fr || item.text || '';
         const vi = item.vi || '';
         const row = document.createElement('div');
         row.className = 'v-sub-item';
         row.id = 'vsub-' + idx;
-
         let inner = `<span class="v-time">${escapeHtml(item.time || item.start.toFixed(0) + 's')}</span>`;
         if (showFr && fr) inner += `<div class="v-fr">${escapeHtml(fr)}</div>`;
         if (showVi && vi) inner += `<div class="v-vi">${escapeHtml(vi)}</div>`;
-
         row.innerHTML = inner;
-        row.onclick = (e) => {
-          e.stopPropagation();
-          seekTo(item.start);
-        };
+        row.onclick = (e) => { e.stopPropagation(); seekTo(item.start); };
         subtitleOverlay.appendChild(row);
       });
     }
@@ -576,27 +549,22 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
         statusEl.textContent = `✓ Đã nạp từ bộ nhớ iPad: Còn lại ${rem} video chưa xem (Đã xem: ${watchedSet.size} / Tổng: ${dbState.videos.length}).`;
       } else {
         document.getElementById('dataManagerBox').open = true;
-        statusEl.textContent = 'Chưa có dữ liệu trên iPad. Hãy mở mục "Kho dữ liệu" bên dưới để nạp file du_lieu_tong_hop.json 1 lần duy nhất.';
+        statusEl.textContent = 'Chưa có dữ liệu trên iPad. Hãy mở mục "Kho dữ liệu" bên dưới để nạp file du_lieu_tong_hop.json.';
       }
     });
 
-    // --- NẠP / XUẤT / KHÔI PHỤC DỮ LIỆU ---
     document.getElementById('unifiedFileInput').addEventListener('change', e => {
       const file = e.target.files[0];
       if (!file) return;
       const reader = new FileReader();
       reader.onload = async ev => {
         try {
-          const parsed = JSON.parse(ev.target.result);
-          hydrateState(parsed);
+          hydrateState(JSON.parse(ev.target.result));
           await saveToIDB();
           document.getElementById('dataManagerBox').open = false;
           refreshDropdown('', true);
-          const rem = getAvailableIds().length;
-          statusEl.textContent = `✓ Đã lưu ${dbState.videos.length} video vào bộ nhớ iPad (Còn ${rem} video chưa xem).`;
-        } catch (err) {
-          alert('Lỗi đọc file JSON: ' + err.message);
-        }
+          statusEl.textContent = `✓ Đã lưu ${dbState.videos.length} video vào bộ nhớ iPad.`;
+        } catch (err) { alert('Lỗi đọc file JSON: ' + err.message); }
       };
       reader.readAsText(file, 'UTF-8');
     });
@@ -620,7 +588,7 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
       watchedSet.clear();
       await saveToIDB();
       refreshDropdown('', true);
-      statusEl.textContent = `✓ Đã khôi phục toàn bộ ${dbState.videos.length} video vào danh sách chưa xem.`;
+      statusEl.textContent = `✓ Đã khôi phục toàn bộ ${dbState.videos.length} video.`;
     });
 
     document.getElementById('clearDbBtn').addEventListener('click', async () => {
@@ -628,10 +596,9 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
       hydrateState({});
       await saveToIDB();
       refreshDropdown('', true);
-      statusEl.textContent = 'Đã xóa sạch dữ liệu trong bộ nhớ web.';
+      statusEl.textContent = 'Đã xóa sạch dữ liệu.';
     });
 
-    // --- BẬT / TẮT PHỤ ĐỀ TỪNG NGÔN NGỮ ---
     const toggleFrBtn = document.getElementById('toggleFrBtn');
     const toggleViBtn = document.getElementById('toggleViBtn');
 
@@ -653,24 +620,20 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
       syncSubtitle(true);
     });
 
-    // --- TOÀN MÀN HÌNH TƯƠNG THÍCH CẢ SAFARI VÀ BRAVE IPADOS ---
-    let hintTimer = null;
+    // --- TOÀN MÀN HÌNH + TỰ CUỘN ẨN THANH ĐỊA CHỈ BRAVE ---
     function enterBravePseudoFullscreen() {
       document.body.classList.add('brave-fs-body');
       videoWrapper.classList.add('pseudo-fs');
       floatingFsBtn.textContent = '✕ Thoát toàn MH';
-      window.scrollTo(0, 60);
-
-      fsHintToast.classList.add('show');
-      clearTimeout(hintTimer);
-      hintTimer = setTimeout(() => fsHintToast.classList.remove('show'), 3500);
+      requestAnimationFrame(() => {
+        window.scrollTo({ top: 140, behavior: 'smooth' });
+      });
     }
 
     function exitBravePseudoFullscreen() {
       document.body.classList.remove('brave-fs-body');
       videoWrapper.classList.remove('pseudo-fs');
       floatingFsBtn.textContent = '⛶ Toàn màn hình';
-      fsHintToast.classList.remove('show');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
@@ -703,20 +666,15 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
     document.getElementById('toggleFsBtn').addEventListener('click', toggleFullscreen);
     floatingFsBtn.addEventListener('click', toggleFullscreen);
 
-    // --- DANH SÁCH CHƯA XEM, RANDOM & XÁC NHẬN ĐÃ XEM ---
     function getAvailableIds() {
       return Object.keys(videoMap).filter(id => !watchedSet.has(id));
     }
 
     document.getElementById('randomBtn').addEventListener('click', () => {
       const available = getAvailableIds();
-      if (!available.length) {
-        alert('Không còn video chưa xem nào trong danh sách!');
-        return;
-      }
+      if (!available.length) { alert('Không còn video chưa xem nào trong danh sách!'); return; }
       let candidates = available.filter(id => id !== currentVideoId);
       if (!candidates.length) candidates = available;
-
       const randomId = candidates[Math.floor(Math.random() * candidates.length)];
       videoSelect.value = randomId;
       loadSelectedVideo(randomId);
@@ -735,13 +693,10 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
     function refreshDropdown(keepId = '', reloadPlayer = true) {
       const availableIds = getAvailableIds();
       videoSelect.innerHTML = '';
-
       if (!availableIds.length) {
         const opt = document.createElement('option');
         opt.value = '';
-        opt.textContent = Object.keys(videoMap).length > 0
-          ? '-- Đã xem hết toàn bộ video trong danh sách! --'
-          : '-- Chưa có dữ liệu video --';
+        opt.textContent = Object.keys(videoMap).length > 0 ? '-- Đã xem hết toàn bộ video! --' : '-- Chưa có dữ liệu --';
         videoSelect.appendChild(opt);
         currentVideoId = '';
         currentTranscript = [];
@@ -751,9 +706,7 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
         confirmWatchedBtn.disabled = true;
         return;
       }
-
       confirmWatchedBtn.disabled = false;
-
       availableIds.forEach(id => {
         const info = videoMap[id];
         const tr = info.transcript || [];
@@ -764,7 +717,6 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
         opt.textContent = `[${id}] ${info.title || 'Không tiêu đề'} (${tag})`;
         videoSelect.appendChild(opt);
       });
-
       if (keepId && availableIds.includes(keepId)) videoSelect.value = keepId;
       if (reloadPlayer) loadSelectedVideo(videoSelect.value);
     }
@@ -778,11 +730,9 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
       currentTranscript = item.transcript || [];
       activeIndex = -1;
       importBox.value = '';
-
       renderOverlayStructure();
       renderTranscriptList();
       populateExportBox(item);
-
       const rawUrl = item.url || '';
       if (rawUrl && !rawUrl.includes('youtube.com') && !rawUrl.includes('youtu.be')) {
         switchToHtml5(rawUrl);
@@ -798,89 +748,52 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
       statusEl.textContent = 'Đang phát file offline: ' + file.name;
     });
 
-    // --- COPY PROMPT & LƯU BẢN DỊCH AI VÀO INDEXEDDB ---
     function populateExportBox(item) {
       const url = item.url || `https://www.youtube.com/watch?v=${item.id}`;
       const compactLines = (item.transcript || []).map((line, idx) => ({
-        i: idx,
-        time: line.time || '',
-        start: line.start,
-        end: line.end,
-        fr: line.fr || line.text || ''
+        i: idx, time: line.time || '', start: line.start, end: line.end, fr: line.fr || line.text || ''
       }));
-
-      exportBox.value =
-        `${AI_PROMPT}\n` +
-        `Link video: ${url}\n` +
-        `Tiêu đề: ${item.title || ''}\n\n` +
-        JSON.stringify(compactLines, null, 2);
+      exportBox.value = `${AI_PROMPT}\nLink video: ${url}\nTiêu đề: ${item.title || ''}\n\n${JSON.stringify(compactLines, null, 2)}`;
     }
 
     document.getElementById('copyRawBtn').addEventListener('click', async () => {
       if (!exportBox.value) return;
-      try {
-        await navigator.clipboard.writeText(exportBox.value);
-      } catch {
-        exportBox.select();
-        document.execCommand('copy');
-      }
+      try { await navigator.clipboard.writeText(exportBox.value); }
+      catch { exportBox.select(); document.execCommand('copy'); }
       const btn = document.getElementById('copyRawBtn');
       btn.textContent = '✓ Đã copy!';
       setTimeout(() => btn.textContent = '📋 Copy trọn bộ', 1800);
     });
 
     document.getElementById('saveSubBtn').addEventListener('click', async () => {
-      if (!currentVideoId || !currentTranscript.length) {
-        alert('Chưa có video hoặc phụ đề gốc để cập nhật!');
-        return;
-      }
+      if (!currentVideoId || !currentTranscript.length) { alert('Chưa có video hoặc phụ đề gốc!'); return; }
       let rawText = importBox.value.trim();
-      if (!rawText) {
-        alert('Hãy dán mảng JSON từ AI vào ô bên dưới trước khi bấm Lưu!');
-        return;
-      }
+      if (!rawText) { alert('Hãy dán mảng JSON từ AI vào ô bên dưới trước khi bấm Lưu!'); return; }
       rawText = rawText.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
-
       let parsed;
-      try {
-        parsed = JSON.parse(rawText);
-      } catch (err) {
-        alert('Dữ liệu dán vào chưa đúng chuẩn JSON:\n' + err.message);
-        return;
-      }
-      if (!Array.isArray(parsed)) {
-        alert('Dữ liệu JSON phải là một danh sách [...] các câu phụ đề.');
-        return;
-      }
+      try { parsed = JSON.parse(rawText); } catch (err) { alert('Lỗi JSON:\n' + err.message); return; }
+      if (!Array.isArray(parsed)) { alert('Dữ liệu JSON phải là một danh sách [...].'); return; }
 
       const byIndex = {};
-      parsed.forEach((row, idx) => {
-        const key = typeof row.i === 'number' ? row.i : idx;
-        byIndex[key] = row;
-      });
-
+      parsed.forEach((row, idx) => { byIndex[typeof row.i === 'number' ? row.i : idx] = row; });
       let updatedCount = 0;
       videoMap[currentVideoId].transcript = currentTranscript.map((orig, idx) => {
         const aiRow = byIndex[idx];
         if (aiRow) {
           updatedCount++;
           return {
-            time: orig.time,
-            start: orig.start,
-            end: orig.end,
+            time: orig.time, start: orig.start, end: orig.end,
             fr: (aiRow.fr || aiRow.text || orig.fr || orig.text || '').trim(),
             vi: (aiRow.vi || '').trim()
           };
         }
         return orig;
       });
-
       await saveToIDB();
       refreshDropdown(currentVideoId, true);
-      statusEl.textContent = `✓ Đã lưu bản dịch song ngữ (${updatedCount}/${currentTranscript.length} câu) vào bộ nhớ iPad!`;
+      statusEl.textContent = `✓ Đã lưu bản dịch song ngữ (${updatedCount}/${currentTranscript.length} câu)!`;
     });
 
-    // --- TRÌNH PHÁT & ĐỒNG BỘ PHỤ ĐỀ THỜI GIAN THỰC ---
     function switchToHtml5(src) {
       isUsingYouTube = false;
       if (ytPlayer?.stopVideo) ytPlayer.stopVideo();
