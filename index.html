@@ -68,7 +68,7 @@
     summary { cursor: pointer; color: #80deea; font-weight: 600; user-select: none; }
     .db-grid { display: grid; gap: 10px; margin-top: 10px; }
 
-    /* Khung phát video & chế độ toàn màn hình giữ phụ đề trên iPad */
+    /* Khung phát video */
     .video-wrapper {
       position: relative;
       width: 100%;
@@ -77,7 +77,8 @@
       border-radius: 10px;
       overflow: hidden;
     }
-    .video-wrapper.pseudo-fs,
+
+    /* Chế độ toàn màn hình trên Safari / Desktop */
     .video-wrapper:fullscreen,
     .video-wrapper:-webkit-full-screen {
       position: fixed !important;
@@ -86,6 +87,28 @@
       height: 100dvh !important;
       z-index: 99999;
       border-radius: 0;
+    }
+
+    /* Chế độ toàn màn hình tương thích Brave iPadOS: dùng sticky để vuốt lên là ẩn thanh URL Brave */
+    body.brave-fs-body {
+      max-width: 100vw !important;
+      margin: 0 !important;
+      padding: 0 0 60vh 0 !important;
+      background: #000 !important;
+      overflow-x: hidden;
+    }
+    body.brave-fs-body > .panel {
+      display: none !important;
+    }
+    body.brave-fs-body .video-wrapper.pseudo-fs {
+      position: sticky !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 100vw !important;
+      height: 100dvh !important;
+      aspect-ratio: auto !important;
+      border-radius: 0 !important;
+      z-index: 99999;
     }
 
     video, #ytPlayer { width: 100%; height: 100%; display: block; }
@@ -208,7 +231,6 @@
       gap: 6px;
       transition: right 0.2s;
     }
-    /* Đẩy cụm nút nổi sang trái cột phụ đề dọc để không đè lên chữ */
     .video-wrapper.has-vertical-sub .floating-controls {
       right: calc(17% + 16px);
     }
@@ -225,6 +247,26 @@
       font-size: 12px;
       border-radius: 6px;
     }
+
+    /* Thông báo hướng dẫn vuốt ẩn thanh Brave */
+    .fs-hint-toast {
+      position: absolute;
+      top: 48px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.82);
+      color: #ffeb3b;
+      border: 1px solid rgba(255, 235, 59, 0.4);
+      padding: 7px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      z-index: 30;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.25s;
+      white-space: nowrap;
+    }
+    .fs-hint-toast.show { opacity: 1; }
 
     .transcript-box {
       margin-top: 14px;
@@ -324,6 +366,7 @@
 
   <!-- KHUNG PHÁT VIDEO -->
   <div class="video-wrapper" id="videoWrapper">
+    <div id="fsHintToast" class="fs-hint-toast">⬆ Vuốt nhẹ từ dưới lên để ẩn thanh địa chỉ Brave</div>
     <div class="floating-controls">
       <button type="button" class="floating-btn" id="floatingLayoutBtn">📐 PĐ: Ngang</button>
       <button type="button" class="floating-btn" id="floatingFsBtn">⛶ Toàn màn hình</button>
@@ -381,7 +424,6 @@ NHIỆM VỤ CỦA BẠN:
 
 DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
 
-    // --- KHO LƯU TRỮ INDEXEDDB CHO SAFARI IPAD ---
     const DB_NAME = 'YtFrenchLearningDB';
     const STORE_NAME = 'mainStore';
     const DB_KEY = 'unified_dataset';
@@ -403,14 +445,13 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
     let isUsingYouTube = false;
     let showFr = true;
     let showVi = true;
-    let subLayout = localStorage.getItem(LAYOUT_PREF_KEY) || 'horizontal'; // 'horizontal' | 'vertical'
+    let subLayout = localStorage.getItem(LAYOUT_PREF_KEY) || 'horizontal';
 
     const videoWrapper = document.getElementById('videoWrapper');
     const html5Video = document.getElementById('html5Video');
     const ytDiv = document.getElementById('ytPlayer');
     const videoSelect = document.getElementById('videoSelect');
     const subtitleOverlay = document.getElementById('subtitleOverlay');
-    const subtitleBox = document.getElementById('subtitleBox');
     const transcriptBox = document.getElementById('transcriptBox');
     const exportBox = document.getElementById('exportBox');
     const importBox = document.getElementById('importBox');
@@ -418,6 +459,8 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
     const confirmWatchedBtn = document.getElementById('confirmWatchedBtn');
     const toggleLayoutBtn = document.getElementById('toggleLayoutBtn');
     const floatingLayoutBtn = document.getElementById('floatingLayoutBtn');
+    const floatingFsBtn = document.getElementById('floatingFsBtn');
+    const fsHintToast = document.getElementById('fsHintToast');
 
     function openIDB() {
       return new Promise((resolve, reject) => {
@@ -500,7 +543,6 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
         return;
       }
 
-      // Chế độ dọc: dựng toàn bộ danh sách câu quá khứ - hiện tại - tương lai
       subtitleOverlay.innerHTML = '';
       if (!currentTranscript.length) return;
 
@@ -524,7 +566,6 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
       });
     }
 
-    // Khởi động: tự đọc dữ liệu đã lưu sẵn trên iPad
     window.addEventListener('DOMContentLoaded', async () => {
       applyLayoutMode();
       const saved = await loadFromIDB();
@@ -539,7 +580,7 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
       }
     });
 
-    // --- NẠP FILE DUY NHẤT VÀO INDEXEDDB ---
+    // --- NẠP / XUẤT / KHÔI PHỤC DỮ LIỆU ---
     document.getElementById('unifiedFileInput').addEventListener('change', e => {
       const file = e.target.files[0];
       if (!file) return;
@@ -560,7 +601,6 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
       reader.readAsText(file, 'UTF-8');
     });
 
-    // --- XUẤT 1 FILE JSON DUY NHẤT ĐỂ SAO LƯU ---
     document.getElementById('exportUnifiedBtn').addEventListener('click', async () => {
       await saveToIDB();
       const blob = new Blob([JSON.stringify(dbState, null, 2)], { type: 'application/json;charset=utf-8' });
@@ -575,7 +615,6 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
       statusEl.textContent = '✓ Đã xuất file du_lieu_tong_hop.json mới nhất.';
     });
 
-    // --- KHÔI PHỤC LỊCH SỬ ĐÃ XEM / XÓA KHO ---
     document.getElementById('resetHistoryBtn').addEventListener('click', async () => {
       if (!confirm('Đưa toàn bộ video đã xem quay trở lại danh sách học?')) return;
       watchedSet.clear();
@@ -614,16 +653,36 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
       syncSubtitle(true);
     });
 
-    // --- TOÀN MÀN HÌNH TƯƠNG THÍCH IPAD SAFARI ---
+    // --- TOÀN MÀN HÌNH TƯƠNG THÍCH CẢ SAFARI VÀ BRAVE IPADOS ---
+    let hintTimer = null;
+    function enterBravePseudoFullscreen() {
+      document.body.classList.add('brave-fs-body');
+      videoWrapper.classList.add('pseudo-fs');
+      floatingFsBtn.textContent = '✕ Thoát toàn MH';
+      window.scrollTo(0, 60);
+
+      fsHintToast.classList.add('show');
+      clearTimeout(hintTimer);
+      hintTimer = setTimeout(() => fsHintToast.classList.remove('show'), 3500);
+    }
+
+    function exitBravePseudoFullscreen() {
+      document.body.classList.remove('brave-fs-body');
+      videoWrapper.classList.remove('pseudo-fs');
+      floatingFsBtn.textContent = '⛶ Toàn màn hình';
+      fsHintToast.classList.remove('show');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
     function toggleFullscreen() {
       const nativeFs = document.fullscreenElement || document.webkitFullscreenElement;
       if (nativeFs) {
         (document.exitFullscreen || document.webkitExitFullscreen)?.call(document);
-        videoWrapper.classList.remove('pseudo-fs');
+        exitBravePseudoFullscreen();
         return;
       }
       if (videoWrapper.classList.contains('pseudo-fs')) {
-        videoWrapper.classList.remove('pseudo-fs');
+        exitBravePseudoFullscreen();
         return;
       }
 
@@ -632,17 +691,17 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
         try {
           const p = reqFs.call(videoWrapper);
           if (p && typeof p.catch === 'function') {
-            p.catch(() => videoWrapper.classList.add('pseudo-fs'));
+            p.catch(() => enterBravePseudoFullscreen());
           }
         } catch {
-          videoWrapper.classList.add('pseudo-fs');
+          enterBravePseudoFullscreen();
         }
       } else {
-        videoWrapper.classList.add('pseudo-fs');
+        enterBravePseudoFullscreen();
       }
     }
     document.getElementById('toggleFsBtn').addEventListener('click', toggleFullscreen);
-    document.getElementById('floatingFsBtn').addEventListener('click', toggleFullscreen);
+    floatingFsBtn.addEventListener('click', toggleFullscreen);
 
     // --- DANH SÁCH CHƯA XEM, RANDOM & XÁC NHẬN ĐÃ XEM ---
     function getAvailableIds() {
@@ -921,7 +980,6 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
           const activeVSub = document.getElementById('vsub-' + idx);
           if (activeVSub) {
             activeVSub.classList.add('active');
-            // Cuộn mượt bên trong khung dọc bên phải để câu đang nói nằm giữa
             const targetScroll = activeVSub.offsetTop - (subtitleOverlay.clientHeight / 2) + (activeVSub.clientHeight / 2);
             subtitleOverlay.scrollTo({ top: Math.max(0, targetScroll), behavior: forceRender ? 'auto' : 'smooth' });
           }
