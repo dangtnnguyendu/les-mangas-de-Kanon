@@ -52,6 +52,7 @@
     .btn-yellow { background: #ffeb3b; color: #111; }
     .btn-purple { background: #9c27b0; color: #fff; }
     .btn-blue { background: #2196f3; color: #fff; }
+    .btn-teal { background: #00897b; color: #fff; }
     .btn-green { background: #4caf50; color: #fff; }
     .btn-red { background: #d32f2f; color: #fff; }
     .btn-gray { background: #383838; color: #eee; }
@@ -86,16 +87,11 @@
       z-index: 99999;
       border-radius: 0;
     }
-    .video-wrapper.pseudo-fs .sub-fr,
-    .video-wrapper:fullscreen .sub-fr,
-    .video-wrapper:-webkit-full-screen .sub-fr { font-size: 28px; }
-    .video-wrapper.pseudo-fs .sub-vi,
-    .video-wrapper:fullscreen .sub-vi,
-    .video-wrapper:-webkit-full-screen .sub-vi { font-size: 22px; }
 
     video, #ytPlayer { width: 100%; height: 100%; display: block; }
 
-    .subtitle-overlay {
+    /* --- CHẾ ĐỘ PHỤ ĐỀ 1: NẰM NGANG Ở ĐÁY VIDEO (MẶC ĐỊNH) --- */
+    .subtitle-overlay.mode-horizontal {
       position: absolute;
       bottom: 54px;
       left: 50%;
@@ -105,7 +101,7 @@
       pointer-events: none;
       z-index: 20;
     }
-    .subtitle-box {
+    .subtitle-overlay.mode-horizontal .subtitle-box {
       display: inline-block;
       background: rgba(0, 0, 0, 0.84);
       padding: 8px 16px;
@@ -113,20 +109,121 @@
       line-height: 1.45;
       max-width: 100%;
     }
-    .subtitle-box:empty { display: none; }
+    .subtitle-overlay.mode-horizontal .subtitle-box:empty { display: none; }
     .sub-fr { color: #ffeb3b; font-size: 20px; font-weight: 600; }
     .sub-vi { color: #80deea; font-size: 17px; font-weight: 500; margin-top: 3px; }
 
-    .floating-fs-btn {
+    .video-wrapper.pseudo-fs .mode-horizontal .sub-fr,
+    .video-wrapper:fullscreen .mode-horizontal .sub-fr,
+    .video-wrapper:-webkit-full-screen .mode-horizontal .sub-fr { font-size: 28px; }
+    .video-wrapper.pseudo-fs .mode-horizontal .sub-vi,
+    .video-wrapper:fullscreen .mode-horizontal .sub-vi,
+    .video-wrapper:-webkit-full-screen .mode-horizontal .sub-vi { font-size: 22px; }
+
+    /* --- CHẾ ĐỘ PHỤ ĐỀ 2: NẰM DỌC BÊN PHẢI (QUÁ KHỨ - HIỆN TẠI - TƯƠNG LAI) --- */
+    .subtitle-overlay.mode-vertical {
       position: absolute;
-      top: 12px;
+      top: 8px;
+      right: 8px;
+      bottom: 46px;
+      width: 17%;
+      min-width: 135px;
+      background: rgba(12, 12, 12, 0.56);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 8px;
+      padding: 6px;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      pointer-events: auto;
+      z-index: 20;
+      text-align: left;
+    }
+    .subtitle-overlay.mode-vertical:empty { display: none; }
+
+    /* Khi phóng toàn màn hình: chiếm đúng 1/8 chiều rộng (12.5%) nằm bên phải */
+    .video-wrapper.pseudo-fs .subtitle-overlay.mode-vertical,
+    .video-wrapper:fullscreen .subtitle-overlay.mode-vertical,
+    .video-wrapper:-webkit-full-screen .subtitle-overlay.mode-vertical {
+      width: 12.5%;
+      min-width: 120px;
+      top: 10px;
+      right: 10px;
+      bottom: 52px;
+      padding: 7px 6px;
+    }
+
+    .v-sub-item {
+      padding: 5px 6px;
+      margin-bottom: 5px;
+      border-radius: 5px;
+      cursor: pointer;
+      opacity: 0.65;
+      border-left: 2px solid transparent;
+      transition: background 0.15s, opacity 0.15s;
+    }
+    .v-sub-item:active { background: rgba(255, 255, 255, 0.12); }
+    .v-sub-item.active {
+      opacity: 1;
+      background: rgba(255, 235, 59, 0.18);
+      border-left: 2px solid #ffeb3b;
+    }
+    .v-time {
+      display: block;
+      font-size: 9px;
+      font-family: monospace;
+      color: #9e9e9e;
+      margin-bottom: 2px;
+    }
+    .v-fr {
+      color: #ffeb3b;
+      font-size: 11px;
+      font-weight: 600;
+      line-height: 1.32;
+      word-break: break-word;
+    }
+    .v-vi {
+      color: #80deea;
+      font-size: 10px;
+      font-weight: 400;
+      line-height: 1.3;
+      margin-top: 2px;
+      word-break: break-word;
+    }
+    .video-wrapper.pseudo-fs .v-fr,
+    .video-wrapper:fullscreen .v-fr,
+    .video-wrapper:-webkit-full-screen .v-fr { font-size: 12px; }
+    .video-wrapper.pseudo-fs .v-vi,
+    .video-wrapper:fullscreen .v-vi,
+    .video-wrapper:-webkit-full-screen .v-vi { font-size: 11px; }
+
+    /* Cụm nút nổi trên góc video */
+    .floating-controls {
+      position: absolute;
+      top: 10px;
       right: 12px;
       z-index: 25;
-      background: rgba(0, 0, 0, 0.72);
+      display: flex;
+      gap: 6px;
+      transition: right 0.2s;
+    }
+    /* Đẩy cụm nút nổi sang trái cột phụ đề dọc để không đè lên chữ */
+    .video-wrapper.has-vertical-sub .floating-controls {
+      right: calc(17% + 16px);
+    }
+    .video-wrapper.pseudo-fs.has-vertical-sub .floating-controls,
+    .video-wrapper:fullscreen.has-vertical-sub .floating-controls,
+    .video-wrapper:-webkit-full-screen.has-vertical-sub .floating-controls {
+      right: calc(12.5% + 18px);
+    }
+    .floating-btn {
+      background: rgba(0, 0, 0, 0.68);
       color: #fff;
-      border: 1px solid rgba(255, 255, 255, 0.35);
-      padding: 7px 12px;
-      font-size: 13px;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      padding: 6px 10px;
+      font-size: 12px;
+      border-radius: 6px;
     }
 
     .transcript-box {
@@ -196,6 +293,7 @@
     <div class="row">
       <button type="button" class="btn-blue" id="toggleFrBtn">🇫🇷 Pháp: BẬT</button>
       <button type="button" class="btn-blue" id="toggleViBtn">🇻🇳 Việt: BẬT</button>
+      <button type="button" class="btn-teal" id="toggleLayoutBtn">📐 Kiểu PĐ: Ngang</button>
       <button type="button" class="btn-yellow" id="toggleFsBtn">⛶ Toàn màn hình</button>
     </div>
 
@@ -226,10 +324,13 @@
 
   <!-- KHUNG PHÁT VIDEO -->
   <div class="video-wrapper" id="videoWrapper">
-    <button type="button" class="floating-fs-btn" id="floatingFsBtn">⛶ Toàn màn hình</button>
+    <div class="floating-controls">
+      <button type="button" class="floating-btn" id="floatingLayoutBtn">📐 PĐ: Ngang</button>
+      <button type="button" class="floating-btn" id="floatingFsBtn">⛶ Toàn màn hình</button>
+    </div>
     <video id="html5Video" controls playsinline webkit-playsinline></video>
     <div id="ytPlayer" style="display:none;"></div>
-    <div class="subtitle-overlay">
+    <div id="subtitleOverlay" class="subtitle-overlay mode-horizontal">
       <div id="subtitleBox" class="subtitle-box"></div>
     </div>
   </div>
@@ -284,6 +385,7 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
     const DB_NAME = 'YtFrenchLearningDB';
     const STORE_NAME = 'mainStore';
     const DB_KEY = 'unified_dataset';
+    const LAYOUT_PREF_KEY = 'yt_fr_sub_layout_mode';
 
     let dbState = {
       updated_at: '',
@@ -299,20 +401,23 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
     let activeIndex = -1;
     let ytPlayer = null;
     let isUsingYouTube = false;
-    let currentVttUrl = null;
     let showFr = true;
     let showVi = true;
+    let subLayout = localStorage.getItem(LAYOUT_PREF_KEY) || 'horizontal'; // 'horizontal' | 'vertical'
 
     const videoWrapper = document.getElementById('videoWrapper');
     const html5Video = document.getElementById('html5Video');
     const ytDiv = document.getElementById('ytPlayer');
     const videoSelect = document.getElementById('videoSelect');
+    const subtitleOverlay = document.getElementById('subtitleOverlay');
     const subtitleBox = document.getElementById('subtitleBox');
     const transcriptBox = document.getElementById('transcriptBox');
     const exportBox = document.getElementById('exportBox');
     const importBox = document.getElementById('importBox');
     const statusEl = document.getElementById('status');
     const confirmWatchedBtn = document.getElementById('confirmWatchedBtn');
+    const toggleLayoutBtn = document.getElementById('toggleLayoutBtn');
+    const floatingLayoutBtn = document.getElementById('floatingLayoutBtn');
 
     function openIDB() {
       return new Promise((resolve, reject) => {
@@ -364,8 +469,64 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
       dbState.videos = Object.values(videoMap);
     }
 
+    // --- CHUYỂN ĐỔI KIỂU PHỤ ĐỀ: NGANG <-> DỌC ---
+    function applyLayoutMode() {
+      const isVert = subLayout === 'vertical';
+      subtitleOverlay.className = isVert
+        ? 'subtitle-overlay mode-vertical'
+        : 'subtitle-overlay mode-horizontal';
+      videoWrapper.classList.toggle('has-vertical-sub', isVert);
+
+      toggleLayoutBtn.textContent = isVert ? '📐 Kiểu PĐ: Dọc' : '📐 Kiểu PĐ: Ngang';
+      floatingLayoutBtn.textContent = isVert ? '📐 PĐ: Dọc' : '📐 PĐ: Ngang';
+
+      renderOverlayStructure();
+      activeIndex = -1;
+      syncSubtitle(true);
+    }
+
+    function toggleLayoutMode() {
+      subLayout = subLayout === 'horizontal' ? 'vertical' : 'horizontal';
+      localStorage.setItem(LAYOUT_PREF_KEY, subLayout);
+      applyLayoutMode();
+    }
+
+    toggleLayoutBtn.addEventListener('click', toggleLayoutMode);
+    floatingLayoutBtn.addEventListener('click', toggleLayoutMode);
+
+    function renderOverlayStructure() {
+      if (subLayout === 'horizontal') {
+        subtitleOverlay.innerHTML = '<div id="subtitleBox" class="subtitle-box"></div>';
+        return;
+      }
+
+      // Chế độ dọc: dựng toàn bộ danh sách câu quá khứ - hiện tại - tương lai
+      subtitleOverlay.innerHTML = '';
+      if (!currentTranscript.length) return;
+
+      currentTranscript.forEach((item, idx) => {
+        const fr = item.fr || item.text || '';
+        const vi = item.vi || '';
+        const row = document.createElement('div');
+        row.className = 'v-sub-item';
+        row.id = 'vsub-' + idx;
+
+        let inner = `<span class="v-time">${escapeHtml(item.time || item.start.toFixed(0) + 's')}</span>`;
+        if (showFr && fr) inner += `<div class="v-fr">${escapeHtml(fr)}</div>`;
+        if (showVi && vi) inner += `<div class="v-vi">${escapeHtml(vi)}</div>`;
+
+        row.innerHTML = inner;
+        row.onclick = (e) => {
+          e.stopPropagation();
+          seekTo(item.start);
+        };
+        subtitleOverlay.appendChild(row);
+      });
+    }
+
     // Khởi động: tự đọc dữ liệu đã lưu sẵn trên iPad
     window.addEventListener('DOMContentLoaded', async () => {
+      applyLayoutMode();
       const saved = await loadFromIDB();
       if (saved && Array.isArray(saved.videos) && saved.videos.length > 0) {
         hydrateState(saved);
@@ -391,7 +552,7 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
           document.getElementById('dataManagerBox').open = false;
           refreshDropdown('', true);
           const rem = getAvailableIds().length;
-          statusEl.textContent = `✓ Đã lưu ${dbState.videos.length} video vào bộ nhớ iPad (Còn ${rem} video chưa xem). Những lần sau mở app là dùng ngay!`;
+          statusEl.textContent = `✓ Đã lưu ${dbState.videos.length} video vào bộ nhớ iPad (Còn ${rem} video chưa xem).`;
         } catch (err) {
           alert('Lỗi đọc file JSON: ' + err.message);
         }
@@ -439,6 +600,7 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
       showFr = !showFr;
       toggleFrBtn.textContent = `🇫🇷 Pháp: ${showFr ? 'BẬT' : 'TẮT'}`;
       toggleFrBtn.className = showFr ? 'btn-blue' : 'btn-off';
+      if (subLayout === 'vertical') renderOverlayStructure();
       activeIndex = -1;
       syncSubtitle(true);
     });
@@ -447,6 +609,7 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
       showVi = !showVi;
       toggleViBtn.textContent = `🇻🇳 Việt: ${showVi ? 'BẬT' : 'TẮT'}`;
       toggleViBtn.className = showVi ? 'btn-blue' : 'btn-off';
+      if (subLayout === 'vertical') renderOverlayStructure();
       activeIndex = -1;
       syncSubtitle(true);
     });
@@ -523,7 +686,7 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
         videoSelect.appendChild(opt);
         currentVideoId = '';
         currentTranscript = [];
-        subtitleBox.innerHTML = '';
+        renderOverlayStructure();
         transcriptBox.innerHTML = '';
         exportBox.value = '';
         confirmWatchedBtn.disabled = true;
@@ -555,9 +718,9 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
       const item = videoMap[id];
       currentTranscript = item.transcript || [];
       activeIndex = -1;
-      subtitleBox.innerHTML = '';
       importBox.value = '';
 
+      renderOverlayStructure();
       renderTranscriptList();
       populateExportBox(item);
 
@@ -734,24 +897,42 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
 
       const idx = currentTranscript.findIndex(item => currentTime >= item.start && currentTime <= item.end);
       if (idx !== activeIndex || forceRender) {
-        if (activeIndex !== -1) document.getElementById('line-' + activeIndex)?.classList.remove('active');
+        if (activeIndex !== -1) {
+          document.getElementById('line-' + activeIndex)?.classList.remove('active');
+          document.getElementById('vsub-' + activeIndex)?.classList.remove('active');
+        }
         activeIndex = idx;
-        if (idx !== -1) {
-          const item = currentTranscript[idx];
-          const fr = item.fr || item.text || '';
-          const vi = item.vi || '';
-          let html = '';
-          if (showFr && fr) html += `<div class="sub-fr">${escapeHtml(fr)}</div>`;
-          if (showVi && vi) html += `<div class="sub-vi">${escapeHtml(vi)}</div>`;
-          subtitleBox.innerHTML = html;
 
+        if (subLayout === 'horizontal') {
+          const box = document.getElementById('subtitleBox');
+          if (!box) return;
+          if (idx !== -1) {
+            const item = currentTranscript[idx];
+            const fr = item.fr || item.text || '';
+            const vi = item.vi || '';
+            let html = '';
+            if (showFr && fr) html += `<div class="sub-fr">${escapeHtml(fr)}</div>`;
+            if (showVi && vi) html += `<div class="sub-vi">${escapeHtml(vi)}</div>`;
+            box.innerHTML = html;
+          } else {
+            box.innerHTML = '';
+          }
+        } else if (idx !== -1) {
+          const activeVSub = document.getElementById('vsub-' + idx);
+          if (activeVSub) {
+            activeVSub.classList.add('active');
+            // Cuộn mượt bên trong khung dọc bên phải để câu đang nói nằm giữa
+            const targetScroll = activeVSub.offsetTop - (subtitleOverlay.clientHeight / 2) + (activeVSub.clientHeight / 2);
+            subtitleOverlay.scrollTo({ top: Math.max(0, targetScroll), behavior: forceRender ? 'auto' : 'smooth' });
+          }
+        }
+
+        if (idx !== -1) {
           const activeLine = document.getElementById('line-' + idx);
           if (activeLine) {
             activeLine.classList.add('active');
             if (!forceRender) activeLine.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
           }
-        } else {
-          subtitleBox.innerHTML = '';
         }
       }
     }
