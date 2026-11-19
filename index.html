@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Học Tiếng Pháp">
+  <title>Học Tiếng Pháp Qua Video - Song Ngữ</title>
+  <style>
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 12px 14px 48px;
+      background: #121212;
+      color: #eee;
+    }
+    .panel {
+      background: #1e1e1e;
+      padding: 12px;
+      border-radius: 10px;
+      display: grid;
+      gap: 10px;
+      margin-bottom: 14px;
+      font-size: 14px;
+      border: 1px solid #2c2c2c;
+    }
+    .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    select {
+      flex: 1;
+      min-width: 220px;
+      padding: 10px 12px;
+      background: #2a2a2a;
+      color: #fff;
+      border: 1px solid #444;
+      border-radius: 8px;
+      font-size: 15px;
+    }
+    button {
+      padding: 10px 14px;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 14px;
+      touch-action: manipulation;
+    }
+    button:active { transform: scale(0.98); }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-yellow { background: #ffeb3b; color: #111; }
+    .btn-purple { background: #9c27b0; color: #fff; }
+    .btn-blue { background: #2196f3; color: #fff; }
+    .btn-green { background: #4caf50; color: #fff; }
+    .btn-red { background: #d32f2f; color: #fff; }
+    .btn-gray { background: #383838; color: #eee; }
+    .btn-off { background: #242424; color: #777; border: 1px solid #383838; }
+
+    details {
+      background: #161616;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid #2b2b2b;
+      font-size: 13px;
+    }
+    summary { cursor: pointer; color: #80deea; font-weight: 600; user-select: none; }
+    .db-grid { display: grid; gap: 10px; margin-top: 10px; }
+
+    /* Khung phát video & chế độ toàn màn hình giữ phụ đề trên iPad */
+    .video-wrapper {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      background: #000;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .video-wrapper.pseudo-fs,
+    .video-wrapper:fullscreen,
+    .video-wrapper:-webkit-full-screen {
+      position: fixed !important;
+      top: 0; left: 0;
+      width: 100vw !important;
+      height: 100dvh !important;
+      z-index: 99999;
+      border-radius: 0;
+    }
+    .video-wrapper.pseudo-fs .sub-fr,
+    .video-wrapper:fullscreen .sub-fr,
+    .video-wrapper:-webkit-full-screen .sub-fr { font-size: 28px; }
+    .video-wrapper.pseudo-fs .sub-vi,
+    .video-wrapper:fullscreen .sub-vi,
+    .video-wrapper:-webkit-full-screen .sub-vi { font-size: 22px; }
+
+    video, #ytPlayer { width: 100%; height: 100%; display: block; }
+
+    .subtitle-overlay {
+      position: absolute;
+      bottom: 54px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 94%;
+      text-align: center;
+      pointer-events: none;
+      z-index: 20;
+    }
+    .subtitle-box {
+      display: inline-block;
+      background: rgba(0, 0, 0, 0.84);
+      padding: 8px 16px;
+      border-radius: 8px;
+      line-height: 1.45;
+      max-width: 100%;
+    }
+    .subtitle-box:empty { display: none; }
+    .sub-fr { color: #ffeb3b; font-size: 20px; font-weight: 600; }
+    .sub-vi { color: #80deea; font-size: 17px; font-weight: 500; margin-top: 3px; }
+
+    .floating-fs-btn {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      z-index: 25;
+      background: rgba(0, 0, 0, 0.72);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      padding: 7px 12px;
+      font-size: 13px;
+    }
+
+    .transcript-box {
+      margin-top: 14px;
+      max-height: 290px;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      background: #1e1e1e;
+      border-radius: 10px;
+      padding: 8px;
+      border: 1px solid #2c2c2c;
+    }
+    .line {
+      padding: 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      gap: 12px;
+      font-size: 15px;
+      border-bottom: 1px solid #262626;
+    }
+    .line:active, .line:hover { background: #2a2a2a; }
+    .line.active { background: #332b00; }
+    .line.active .line-fr { color: #ffeb3b; font-weight: 600; }
+    .time { color: #888; min-width: 48px; font-family: monospace; padding-top: 2px; font-size: 13px; }
+    .line-vi { color: #80deea; font-size: 14px; margin-top: 3px; }
+
+    .ai-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 14px;
+    }
+    @media (max-width: 720px) { .ai-grid { grid-template-columns: 1fr; } }
+    textarea {
+      width: 100%;
+      height: 135px;
+      background: #141414;
+      color: #dcdcdc;
+      border: 1px solid #3c3c3c;
+      border-radius: 8px;
+      padding: 10px;
+      font-family: monospace;
+      font-size: 12px;
+      resize: vertical;
+    }
+    .box-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+      font-weight: 600;
+    }
+    #status { color: #4caf50; font-size: 13px; line-height: 1.4; }
+  </style>
+</head>
+<body>
+
+  <!-- BẢNG ĐIỀU KHIỂN CHÍNH -->
+  <div class="panel">
+    <div class="row">
+      <select id="videoSelect"><option value="">-- Đang mở kho dữ liệu trên iPad... --</option></select>
+      <button type="button" class="btn-purple" id="randomBtn">🎲 Random</button>
+      <button type="button" class="btn-green" id="confirmWatchedBtn">✓ Xác nhận đã xem</button>
+    </div>
+
+    <div class="row">
+      <button type="button" class="btn-blue" id="toggleFrBtn">🇫🇷 Pháp: BẬT</button>
+      <button type="button" class="btn-blue" id="toggleViBtn">🇻🇳 Việt: BẬT</button>
+      <button type="button" class="btn-yellow" id="toggleFsBtn">⛶ Toàn màn hình</button>
+    </div>
+
+    <div id="status">Đang kiểm tra dữ liệu lưu trong IndexedDB...</div>
+
+    <!-- QUẢN LÝ KHO DỮ LIỆU DUY NHẤT (INDEXEDDB) -->
+    <details id="dataManagerBox">
+      <summary>💾 Kho dữ liệu trên iPad (Nạp 1 lần / Xuất sao lưu / Khôi phục)</summary>
+      <div class="db-grid">
+        <div class="row">
+          <label>📥 <b>Nạp file dữ liệu duy nhất</b> (<code>du_lieu_tong_hop.json</code>):
+            <input type="file" id="unifiedFileInput" accept=".json,application/json">
+          </label>
+        </div>
+        <div class="row">
+          <button type="button" class="btn-blue" id="exportUnifiedBtn">📤 Xuất 1 file JSON mới nhất</button>
+          <button type="button" class="btn-gray" id="resetHistoryBtn">↺ Khôi phục lịch sử đã xem</button>
+          <button type="button" class="btn-red" id="clearDbBtn">🗑️ Xóa sạch bộ nhớ web</button>
+        </div>
+        <div class="row" style="border-top: 1px solid #2b2b2b; padding-top: 8px;">
+          <label>Hoặc chọn phát file <b>.mp4</b> offline trên iPad:
+            <input type="file" id="localVideoInput" accept="video/*">
+          </label>
+        </div>
+      </div>
+    </details>
+  </div>
+
+  <!-- KHUNG PHÁT VIDEO -->
+  <div class="video-wrapper" id="videoWrapper">
+    <button type="button" class="floating-fs-btn" id="floatingFsBtn">⛶ Toàn màn hình</button>
+    <video id="html5Video" controls playsinline webkit-playsinline></video>
+    <div id="ytPlayer" style="display:none;"></div>
+    <div class="subtitle-overlay">
+      <div id="subtitleBox" class="subtitle-box"></div>
+    </div>
+  </div>
+
+  <!-- DỊCH PHỤ ĐỀ QUA AI TRỰC TIẾP TRÊN IPAD -->
+  <div class="ai-grid">
+    <div class="panel" style="margin-bottom:0;">
+      <div class="box-header">
+        <span>1. Prompt + Phụ đề gốc (Gửi AI)</span>
+        <button type="button" class="btn-blue" id="copyRawBtn">📋 Copy trọn bộ</button>
+      </div>
+      <textarea id="exportBox" readonly placeholder="Chọn video để tự động tạo Prompt..."></textarea>
+    </div>
+
+    <div class="panel" style="margin-bottom:0;">
+      <div class="box-header">
+        <span>2. Dán JSON từ AI vào đây</span>
+        <button type="button" class="btn-green" id="saveSubBtn">💾 Lưu vào iPad</button>
+      </div>
+      <textarea id="importBox" placeholder='Dán mảng JSON [{"i": 0, "fr": "...", "vi": "..."}] từ AI vào đây rồi bấm Lưu...'></textarea>
+    </div>
+  </div>
+
+  <!-- DANH SÁCH CÂU THOẠI -->
+  <div class="transcript-box" id="transcriptBox"></div>
+
+  <script>
+    const AI_PROMPT = `Bạn là chuyên gia biên tập và dịch thuật phụ đề song ngữ Pháp - Việt cho video hội thoại/kể chuyện.
+Dưới đây là thông tin video (link, tiêu đề) và mảng JSON chứa bản chép lời tiếng Pháp tự động (ASR) kèm mốc thời gian.
+
+NHIỆM VỤ CỦA BẠN:
+1. Đánh bóng tiếng Pháp (trường "fr"):
+   - Sửa các lỗi nhận diện giọng nói sai chính tả hoặc đồng âm (đặc biệt là tên riêng nhân vật, địa danh, từ mượn dựa theo ngữ cảnh câu chuyện và tiêu đề video).
+   - Bổ sung dấu câu (chấm, phẩy, hỏi, cảm thán) và viết hoa đúng chuẩn ngữ pháp tiếng Pháp.
+   - Giữ nguyên số lượng dòng và đúng chỉ số "i" của từng dòng để không lệch mốc thời gian.
+2. Dịch sang tiếng Việt (trường "vi"):
+   - Dịch tự nhiên, sát nghĩa, đúng xưng hô và ngữ cảnh của toàn đoạn hội thoại.
+   - Mỗi dòng "vi" phải tương ứng với đúng phần lời thoại ở dòng "fr" cùng chỉ số "i" (nếu một câu dài bị ngắt qua 2-3 mốc thời gian, hãy chia vế dịch tiếng Việt khớp với từng mốc).
+   - Chuyển các thẻ âm thanh như [Musique] -> [Âm nhạc], [Rires] -> [Tiếng cười].
+
+ĐỊNH DẠNG ĐẦU RA BẮT BUỘC:
+- Chỉ trả về DUY NHẤT một khối mã JSON hợp lệ theo khuôn mẫu sau, không thêm bất kỳ lời giải thích hay văn bản nào bên ngoài khối JSON:
+
+[
+  {"i": 0, "fr": "Câu tiếng Pháp đã sửa chuẩn.", "vi": "Câu dịch tiếng Việt tương ứng."},
+  {"i": 1, "fr": "Câu tiếp theo...", "vi": "Bản dịch tiếp theo..."}
+]
+
+DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
+
+    // --- KHO LƯU TRỮ INDEXEDDB CHO SAFARI IPAD ---
+    const DB_NAME = 'YtFrenchLearningDB';
+    const STORE_NAME = 'mainStore';
+    const DB_KEY = 'unified_dataset';
+
+    let dbState = {
+      updated_at: '',
+      skipped_ids: [],
+      watched_ids: [],
+      videos: []
+    };
+    let videoMap = {};
+    let watchedSet = new Set();
+
+    let currentVideoId = '';
+    let currentTranscript = [];
+    let activeIndex = -1;
+    let ytPlayer = null;
+    let isUsingYouTube = false;
+    let currentVttUrl = null;
+    let showFr = true;
+    let showVi = true;
+
+    const videoWrapper = document.getElementById('videoWrapper');
+    const html5Video = document.getElementById('html5Video');
+    const ytDiv = document.getElementById('ytPlayer');
+    const videoSelect = document.getElementById('videoSelect');
+    const subtitleBox = document.getElementById('subtitleBox');
+    const transcriptBox = document.getElementById('transcriptBox');
+    const exportBox = document.getElementById('exportBox');
+    const importBox = document.getElementById('importBox');
+    const statusEl = document.getElementById('status');
+    const confirmWatchedBtn = document.getElementById('confirmWatchedBtn');
+
+    function openIDB() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(DB_NAME, 1);
+        req.onupgradeneeded = () => req.result.createObjectStore(STORE_NAME);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    async function saveToIDB() {
+      dbState.updated_at = new Date().toISOString();
+      dbState.watched_ids = [...watchedSet];
+      dbState.videos = Object.values(videoMap);
+      const db = await openIDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        tx.objectStore(STORE_NAME).put(dbState, DB_KEY);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+    }
+
+    async function loadFromIDB() {
+      const db = await openIDB();
+      return new Promise((resolve) => {
+        const req = db.transaction(STORE_NAME, 'readonly').objectStore(STORE_NAME).get(DB_KEY);
+        req.onsuccess = () => resolve(req.result || null);
+        req.onerror = () => resolve(null);
+      });
+    }
+
+    function hydrateState(raw) {
+      dbState = {
+        updated_at: raw?.updated_at || '',
+        skipped_ids: Array.isArray(raw?.skipped_ids) ? raw.skipped_ids : [],
+        watched_ids: Array.isArray(raw?.watched_ids) ? raw.watched_ids : [],
+        videos: []
+      };
+      watchedSet = new Set(dbState.watched_ids);
+      videoMap = {};
+
+      const list = Array.isArray(raw?.videos) ? raw.videos : (Array.isArray(raw) ? raw : []);
+      list.forEach(item => {
+        if (item && item.id) {
+          videoMap[item.id] = item;
+        }
+      });
+      dbState.videos = Object.values(videoMap);
+    }
+
+    // Khởi động: tự đọc dữ liệu đã lưu sẵn trên iPad
+    window.addEventListener('DOMContentLoaded', async () => {
+      const saved = await loadFromIDB();
+      if (saved && Array.isArray(saved.videos) && saved.videos.length > 0) {
+        hydrateState(saved);
+        refreshDropdown('', true);
+        const rem = getAvailableIds().length;
+        statusEl.textContent = `✓ Đã nạp từ bộ nhớ iPad: Còn lại ${rem} video chưa xem (Đã xem: ${watchedSet.size} / Tổng: ${dbState.videos.length}).`;
+      } else {
+        document.getElementById('dataManagerBox').open = true;
+        statusEl.textContent = 'Chưa có dữ liệu trên iPad. Hãy mở mục "Kho dữ liệu" bên dưới để nạp file du_lieu_tong_hop.json 1 lần duy nhất.';
+      }
+    });
+
+    // --- NẠP FILE DUY NHẤT VÀO INDEXEDDB ---
+    document.getElementById('unifiedFileInput').addEventListener('change', e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = async ev => {
+        try {
+          const parsed = JSON.parse(ev.target.result);
+          hydrateState(parsed);
+          await saveToIDB();
+          document.getElementById('dataManagerBox').open = false;
+          refreshDropdown('', true);
+          const rem = getAvailableIds().length;
+          statusEl.textContent = `✓ Đã lưu ${dbState.videos.length} video vào bộ nhớ iPad (Còn ${rem} video chưa xem). Những lần sau mở app là dùng ngay!`;
+        } catch (err) {
+          alert('Lỗi đọc file JSON: ' + err.message);
+        }
+      };
+      reader.readAsText(file, 'UTF-8');
+    });
+
+    // --- XUẤT 1 FILE JSON DUY NHẤT ĐỂ SAO LƯU ---
+    document.getElementById('exportUnifiedBtn').addEventListener('click', async () => {
+      await saveToIDB();
+      const blob = new Blob([JSON.stringify(dbState, null, 2)], { type: 'application/json;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'du_lieu_tong_hop.json';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      statusEl.textContent = '✓ Đã xuất file du_lieu_tong_hop.json mới nhất.';
+    });
+
+    // --- KHÔI PHỤC LỊCH SỬ ĐÃ XEM / XÓA KHO ---
+    document.getElementById('resetHistoryBtn').addEventListener('click', async () => {
+      if (!confirm('Đưa toàn bộ video đã xem quay trở lại danh sách học?')) return;
+      watchedSet.clear();
+      await saveToIDB();
+      refreshDropdown('', true);
+      statusEl.textContent = `✓ Đã khôi phục toàn bộ ${dbState.videos.length} video vào danh sách chưa xem.`;
+    });
+
+    document.getElementById('clearDbBtn').addEventListener('click', async () => {
+      if (!confirm('Xóa toàn bộ dữ liệu đã lưu trong trình duyệt này?')) return;
+      hydrateState({});
+      await saveToIDB();
+      refreshDropdown('', true);
+      statusEl.textContent = 'Đã xóa sạch dữ liệu trong bộ nhớ web.';
+    });
+
+    // --- BẬT / TẮT PHỤ ĐỀ TỪNG NGÔN NGỮ ---
+    const toggleFrBtn = document.getElementById('toggleFrBtn');
+    const toggleViBtn = document.getElementById('toggleViBtn');
+
+    toggleFrBtn.addEventListener('click', () => {
+      showFr = !showFr;
+      toggleFrBtn.textContent = `🇫🇷 Pháp: ${showFr ? 'BẬT' : 'TẮT'}`;
+      toggleFrBtn.className = showFr ? 'btn-blue' : 'btn-off';
+      activeIndex = -1;
+      syncSubtitle(true);
+    });
+
+    toggleViBtn.addEventListener('click', () => {
+      showVi = !showVi;
+      toggleViBtn.textContent = `🇻🇳 Việt: ${showVi ? 'BẬT' : 'TẮT'}`;
+      toggleViBtn.className = showVi ? 'btn-blue' : 'btn-off';
+      activeIndex = -1;
+      syncSubtitle(true);
+    });
+
+    // --- TOÀN MÀN HÌNH TƯƠNG THÍCH IPAD SAFARI ---
+    function toggleFullscreen() {
+      const nativeFs = document.fullscreenElement || document.webkitFullscreenElement;
+      if (nativeFs) {
+        (document.exitFullscreen || document.webkitExitFullscreen)?.call(document);
+        videoWrapper.classList.remove('pseudo-fs');
+        return;
+      }
+      if (videoWrapper.classList.contains('pseudo-fs')) {
+        videoWrapper.classList.remove('pseudo-fs');
+        return;
+      }
+
+      const reqFs = videoWrapper.requestFullscreen || videoWrapper.webkitRequestFullscreen;
+      if (reqFs) {
+        try {
+          const p = reqFs.call(videoWrapper);
+          if (p && typeof p.catch === 'function') {
+            p.catch(() => videoWrapper.classList.add('pseudo-fs'));
+          }
+        } catch {
+          videoWrapper.classList.add('pseudo-fs');
+        }
+      } else {
+        videoWrapper.classList.add('pseudo-fs');
+      }
+    }
+    document.getElementById('toggleFsBtn').addEventListener('click', toggleFullscreen);
+    document.getElementById('floatingFsBtn').addEventListener('click', toggleFullscreen);
+
+    // --- DANH SÁCH CHƯA XEM, RANDOM & XÁC NHẬN ĐÃ XEM ---
+    function getAvailableIds() {
+      return Object.keys(videoMap).filter(id => !watchedSet.has(id));
+    }
+
+    document.getElementById('randomBtn').addEventListener('click', () => {
+      const available = getAvailableIds();
+      if (!available.length) {
+        alert('Không còn video chưa xem nào trong danh sách!');
+        return;
+      }
+      let candidates = available.filter(id => id !== currentVideoId);
+      if (!candidates.length) candidates = available;
+
+      const randomId = candidates[Math.floor(Math.random() * candidates.length)];
+      videoSelect.value = randomId;
+      loadSelectedVideo(randomId);
+      statusEl.textContent = `🎲 Đã chọn ngẫu nhiên [${randomId}] (Còn ${available.length} video chưa xem).`;
+    });
+
+    confirmWatchedBtn.addEventListener('click', async () => {
+      if (!currentVideoId) return;
+      const doneId = currentVideoId;
+      watchedSet.add(doneId);
+      await saveToIDB();
+      refreshDropdown('', true);
+      statusEl.textContent = `✓ Đã xác nhận xong [${doneId}] (Còn lại ${getAvailableIds().length} video chưa xem).`;
+    });
+
+    function refreshDropdown(keepId = '', reloadPlayer = true) {
+      const availableIds = getAvailableIds();
+      videoSelect.innerHTML = '';
+
+      if (!availableIds.length) {
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = Object.keys(videoMap).length > 0
+          ? '-- Đã xem hết toàn bộ video trong danh sách! --'
+          : '-- Chưa có dữ liệu video --';
+        videoSelect.appendChild(opt);
+        currentVideoId = '';
+        currentTranscript = [];
+        subtitleBox.innerHTML = '';
+        transcriptBox.innerHTML = '';
+        exportBox.value = '';
+        confirmWatchedBtn.disabled = true;
+        return;
+      }
+
+      confirmWatchedBtn.disabled = false;
+
+      availableIds.forEach(id => {
+        const info = videoMap[id];
+        const tr = info.transcript || [];
+        const hasVi = tr.some(line => line.vi && line.vi.trim() !== '');
+        const tag = hasVi ? '★ Song ngữ' : (tr.length ? '✓ Pháp' : '✗ Trống');
+        const opt = document.createElement('option');
+        opt.value = id;
+        opt.textContent = `[${id}] ${info.title || 'Không tiêu đề'} (${tag})`;
+        videoSelect.appendChild(opt);
+      });
+
+      if (keepId && availableIds.includes(keepId)) videoSelect.value = keepId;
+      if (reloadPlayer) loadSelectedVideo(videoSelect.value);
+    }
+
+    videoSelect.addEventListener('change', () => loadSelectedVideo(videoSelect.value));
+
+    function loadSelectedVideo(id) {
+      if (!id || !videoMap[id]) return;
+      currentVideoId = id;
+      const item = videoMap[id];
+      currentTranscript = item.transcript || [];
+      activeIndex = -1;
+      subtitleBox.innerHTML = '';
+      importBox.value = '';
+
+      renderTranscriptList();
+      populateExportBox(item);
+
+      const rawUrl = item.url || '';
+      if (rawUrl && !rawUrl.includes('youtube.com') && !rawUrl.includes('youtu.be')) {
+        switchToHtml5(rawUrl);
+      } else {
+        switchToYouTube(id);
+      }
+    }
+
+    document.getElementById('localVideoInput').addEventListener('change', e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      switchToHtml5(URL.createObjectURL(file));
+      statusEl.textContent = 'Đang phát file offline: ' + file.name;
+    });
+
+    // --- COPY PROMPT & LƯU BẢN DỊCH AI VÀO INDEXEDDB ---
+    function populateExportBox(item) {
+      const url = item.url || `https://www.youtube.com/watch?v=${item.id}`;
+      const compactLines = (item.transcript || []).map((line, idx) => ({
+        i: idx,
+        time: line.time || '',
+        start: line.start,
+        end: line.end,
+        fr: line.fr || line.text || ''
+      }));
+
+      exportBox.value =
+        `${AI_PROMPT}\n` +
+        `Link video: ${url}\n` +
+        `Tiêu đề: ${item.title || ''}\n\n` +
+        JSON.stringify(compactLines, null, 2);
+    }
+
+    document.getElementById('copyRawBtn').addEventListener('click', async () => {
+      if (!exportBox.value) return;
+      try {
+        await navigator.clipboard.writeText(exportBox.value);
+      } catch {
+        exportBox.select();
+        document.execCommand('copy');
+      }
+      const btn = document.getElementById('copyRawBtn');
+      btn.textContent = '✓ Đã copy!';
+      setTimeout(() => btn.textContent = '📋 Copy trọn bộ', 1800);
+    });
+
+    document.getElementById('saveSubBtn').addEventListener('click', async () => {
+      if (!currentVideoId || !currentTranscript.length) {
+        alert('Chưa có video hoặc phụ đề gốc để cập nhật!');
+        return;
+      }
+      let rawText = importBox.value.trim();
+      if (!rawText) {
+        alert('Hãy dán mảng JSON từ AI vào ô bên dưới trước khi bấm Lưu!');
+        return;
+      }
+      rawText = rawText.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+
+      let parsed;
+      try {
+        parsed = JSON.parse(rawText);
+      } catch (err) {
+        alert('Dữ liệu dán vào chưa đúng chuẩn JSON:\n' + err.message);
+        return;
+      }
+      if (!Array.isArray(parsed)) {
+        alert('Dữ liệu JSON phải là một danh sách [...] các câu phụ đề.');
+        return;
+      }
+
+      const byIndex = {};
+      parsed.forEach((row, idx) => {
+        const key = typeof row.i === 'number' ? row.i : idx;
+        byIndex[key] = row;
+      });
+
+      let updatedCount = 0;
+      videoMap[currentVideoId].transcript = currentTranscript.map((orig, idx) => {
+        const aiRow = byIndex[idx];
+        if (aiRow) {
+          updatedCount++;
+          return {
+            time: orig.time,
+            start: orig.start,
+            end: orig.end,
+            fr: (aiRow.fr || aiRow.text || orig.fr || orig.text || '').trim(),
+            vi: (aiRow.vi || '').trim()
+          };
+        }
+        return orig;
+      });
+
+      await saveToIDB();
+      refreshDropdown(currentVideoId, true);
+      statusEl.textContent = `✓ Đã lưu bản dịch song ngữ (${updatedCount}/${currentTranscript.length} câu) vào bộ nhớ iPad!`;
+    });
+
+    // --- TRÌNH PHÁT & ĐỒNG BỘ PHỤ ĐỀ THỜI GIAN THỰC ---
+    function switchToHtml5(src) {
+      isUsingYouTube = false;
+      if (ytPlayer?.stopVideo) ytPlayer.stopVideo();
+      ytDiv.style.display = 'none';
+      html5Video.style.display = 'block';
+      html5Video.src = src;
+    }
+
+    function switchToYouTube(videoId) {
+      isUsingYouTube = true;
+      html5Video.pause();
+      html5Video.style.display = 'none';
+      ytDiv.style.display = 'block';
+      if (ytPlayer?.loadVideoById) {
+        ytPlayer.loadVideoById(videoId);
+      } else {
+        window.pendingYtId = videoId;
+        if (!document.getElementById('yt-api-script')) {
+          const tag = document.createElement('script');
+          tag.id = 'yt-api-script';
+          tag.src = 'https://www.youtube.com/iframe_api';
+          document.head.appendChild(tag);
+        }
+      }
+    }
+
+    window.onYouTubeIframeAPIReady = function () {
+      ytPlayer = new YT.Player('ytPlayer', {
+        videoId: window.pendingYtId || '',
+        playerVars: { playsinline: 1, fs: 0, rel: 0 }
+      });
+    };
+
+    function escapeHtml(str) {
+      return String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+    }
+
+    function renderTranscriptList() {
+      transcriptBox.innerHTML = '';
+      currentTranscript.forEach((item, idx) => {
+        const fr = item.fr || item.text || '';
+        const vi = item.vi || '';
+        const div = document.createElement('div');
+        div.className = 'line';
+        div.id = 'line-' + idx;
+        div.innerHTML = `
+          <span class="time">${item.time || item.start.toFixed(1) + 's'}</span>
+          <div>
+            <div class="line-fr">${escapeHtml(fr)}</div>
+            ${vi ? `<div class="line-vi">${escapeHtml(vi)}</div>` : ''}
+          </div>
+        `;
+        div.onclick = () => seekTo(item.start);
+        transcriptBox.appendChild(div);
+      });
+    }
+
+    function seekTo(seconds) {
+      if (isUsingYouTube && ytPlayer?.seekTo) {
+        ytPlayer.seekTo(seconds, true);
+        ytPlayer.playVideo();
+      } else {
+        html5Video.currentTime = seconds;
+        html5Video.play();
+      }
+    }
+
+    function syncSubtitle(forceRender = false) {
+      if (!currentTranscript.length) return;
+      const currentTime = (isUsingYouTube && ytPlayer?.getCurrentTime)
+        ? ytPlayer.getCurrentTime()
+        : html5Video.currentTime;
+
+      const idx = currentTranscript.findIndex(item => currentTime >= item.start && currentTime <= item.end);
+      if (idx !== activeIndex || forceRender) {
+        if (activeIndex !== -1) document.getElementById('line-' + activeIndex)?.classList.remove('active');
+        activeIndex = idx;
+        if (idx !== -1) {
+          const item = currentTranscript[idx];
+          const fr = item.fr || item.text || '';
+          const vi = item.vi || '';
+          let html = '';
+          if (showFr && fr) html += `<div class="sub-fr">${escapeHtml(fr)}</div>`;
+          if (showVi && vi) html += `<div class="sub-vi">${escapeHtml(vi)}</div>`;
+          subtitleBox.innerHTML = html;
+
+          const activeLine = document.getElementById('line-' + idx);
+          if (activeLine) {
+            activeLine.classList.add('active');
+            if (!forceRender) activeLine.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+          }
+        } else {
+          subtitleBox.innerHTML = '';
+        }
+      }
+    }
+
+    setInterval(syncSubtitle, 100);
+    html5Video.addEventListener('timeupdate', () => syncSubtitle(false));
+  </script>
+</body>
+</html>
