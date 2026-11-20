@@ -1,915 +1,549 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Học Tiếng Pháp">
-  <title>Học Tiếng Pháp Qua Video - Song Ngữ</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Học Tiếng Pháp Qua Video YouTube</title>
   <style>
-    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-    html, body {
+    * {
+      box-sizing: border-box;
       margin: 0;
       padding: 0;
-      background: #121212;
-      color: #eee;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
+
     body {
-      max-width: 960px;
-      margin: 0 auto;
-      padding: 12px 14px 48px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: #0f172a;
+      color: #f8fafc;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 20px;
     }
-    .panel {
-      background: #1e1e1e;
-      padding: 12px;
-      border-radius: 10px;
-      display: grid;
-      gap: 10px;
-      margin-bottom: 14px;
-      font-size: 14px;
-      border: 1px solid #2c2c2c;
-    }
-    .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-    select {
-      flex: 1;
-      min-width: 220px;
-      padding: 10px 12px;
-      background: #2a2a2a;
-      color: #fff;
-      border: 1px solid #444;
-      border-radius: 8px;
-      font-size: 15px;
-    }
-    button {
-      padding: 10px 14px;
-      border: none;
-      border-radius: 8px;
-      font-weight: 600;
-      cursor: pointer;
-      font-size: 14px;
-      touch-action: manipulation;
-    }
-    button:active { transform: scale(0.98); }
-    button:disabled { opacity: 0.4; cursor: not-allowed; }
-    .btn-yellow { background: #ffeb3b; color: #111; }
-    .btn-purple { background: #9c27b0; color: #fff; }
-    .btn-blue { background: #2196f3; color: #fff; }
-    .btn-teal { background: #00897b; color: #fff; }
-    .btn-green { background: #4caf50; color: #fff; }
-    .btn-red { background: #d32f2f; color: #fff; }
-    .btn-gray { background: #383838; color: #eee; }
-    .btn-off { background: #242424; color: #777; border: 1px solid #383838; }
 
-    details {
-      background: #161616;
-      padding: 10px 12px;
-      border-radius: 8px;
-      border: 1px solid #2b2b2b;
-      font-size: 13px;
+    .app-container {
+      width: 100%;
+      max-width: 920px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
     }
-    summary { cursor: pointer; color: #80deea; font-weight: 600; user-select: none; }
-    .db-grid { display: grid; gap: 10px; margin-top: 10px; }
 
-    /* Khung phát video */
+    /* Khung video sạch hoàn toàn, không đặt nút nổi đè lên thanh điều khiển YouTube */
     .video-wrapper {
       position: relative;
       width: 100%;
       aspect-ratio: 16 / 9;
       background: #000;
-      border-radius: 10px;
+      border-radius: 12px;
       overflow: hidden;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
     }
 
-    /* Chế độ toàn màn hình trên Safari / Desktop */
-    .video-wrapper:fullscreen,
-    .video-wrapper:-webkit-full-screen {
-      position: fixed !important;
-      top: 0; left: 0;
-      width: 100vw !important;
-      height: 100vh !important;
-      z-index: 99999;
-      border-radius: 0;
-    }
-
-    /* Chế độ toàn màn hình chuyên cho Brave iPadOS: tạo không gian cuộn 200vh để Brave tự ẩn thanh địa chỉ */
-    body.brave-fs-body {
-      max-width: 100vw !important;
-      margin: 0 !important;
-      padding: 0 !important;
-      min-height: 200vh !important;
-      background: #000 !important;
-    }
-    body.brave-fs-body > .panel,
-    body.brave-fs-body > .ai-grid,
-    body.brave-fs-body > .transcript-box {
-      display: none !important;
-    }
-    .brave-scroll-spacer {
-      display: none;
-      height: 140px;
-      background: #000;
-      color: #666;
-      font-size: 12px;
-      align-items: flex-end;
-      justify-content: center;
-      padding-bottom: 6px;
-    }
-    body.brave-fs-body .brave-scroll-spacer {
-      display: flex;
-    }
-    body.brave-fs-body .video-wrapper.pseudo-fs {
-      position: sticky !important;
-      top: 0 !important;
-      left: 0 !important;
-      width: 100vw !important;
-      height: 100vh !important;
-      aspect-ratio: auto !important;
-      border-radius: 0 !important;
-      z-index: 99999;
-    }
-
-    video, #ytPlayer { width: 100%; height: 100%; display: block; }
-
-    /* --- CHẾ ĐỘ PHỤ ĐỀ 1: NẰM NGANG Ở ĐÁY VIDEO --- */
-    .subtitle-overlay.mode-horizontal {
+    .video-wrapper iframe,
+    #player {
       position: absolute;
-      bottom: 54px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 94%;
-      text-align: center;
-      pointer-events: none;
-      z-index: 20;
-    }
-    .subtitle-overlay.mode-horizontal .subtitle-box {
-      display: inline-block;
-      background: rgba(0, 0, 0, 0.84);
-      padding: 8px 16px;
-      border-radius: 8px;
-      line-height: 1.45;
-      max-width: 100%;
-    }
-    .subtitle-overlay.mode-horizontal .subtitle-box:empty { display: none; }
-    .sub-fr { color: #ffeb3b; font-size: 20px; font-weight: 600; }
-    .sub-vi { color: #80deea; font-size: 17px; font-weight: 500; margin-top: 3px; }
-
-    .video-wrapper.pseudo-fs .mode-horizontal .sub-fr,
-    .video-wrapper:fullscreen .mode-horizontal .sub-fr,
-    .video-wrapper:-webkit-full-screen .mode-horizontal .sub-fr { font-size: 28px; }
-    .video-wrapper.pseudo-fs .mode-horizontal .sub-vi,
-    .video-wrapper:fullscreen .mode-horizontal .sub-vi,
-    .video-wrapper:-webkit-full-screen .mode-horizontal .sub-vi { font-size: 22px; }
-
-    /* --- CHẾ ĐỘ PHỤ ĐỀ 2: NẰM DỌC BÊN PHẢI (QUÁ KHỨ - HIỆN TẠI - TƯƠNG LAI) --- */
-    .subtitle-overlay.mode-vertical {
-      position: absolute;
-      top: 8px;
-      right: 8px;
-      bottom: 46px;
-      width: 17%;
-      min-width: 135px;
-      background: rgba(12, 12, 12, 0.56);
-      backdrop-filter: blur(4px);
-      -webkit-backdrop-filter: blur(4px);
-      border: 1px solid rgba(255, 255, 255, 0.16);
-      border-radius: 8px;
-      padding: 6px;
-      overflow-y: auto;
-      -webkit-overflow-scrolling: touch;
-      pointer-events: auto;
-      z-index: 20;
-      text-align: left;
-    }
-    .subtitle-overlay.mode-vertical:empty { display: none; }
-
-    .video-wrapper.pseudo-fs .subtitle-overlay.mode-vertical,
-    .video-wrapper:fullscreen .subtitle-overlay.mode-vertical,
-    .video-wrapper:-webkit-full-screen .subtitle-overlay.mode-vertical {
-      width: 12.5%;
-      min-width: 120px;
-      top: 10px;
-      right: 10px;
-      bottom: 52px;
-      padding: 7px 6px;
-    }
-
-    .v-sub-item {
-      padding: 5px 6px;
-      margin-bottom: 5px;
-      border-radius: 5px;
-      cursor: pointer;
-      opacity: 0.65;
-      border-left: 2px solid transparent;
-    }
-    .v-sub-item.active {
-      opacity: 1;
-      background: rgba(255, 235, 59, 0.18);
-      border-left: 2px solid #ffeb3b;
-    }
-    .v-time {
-      display: block;
-      font-size: 9px;
-      font-family: monospace;
-      color: #9e9e9e;
-      margin-bottom: 2px;
-    }
-    .v-fr {
-      color: #ffeb3b;
-      font-size: 11px;
-      font-weight: 600;
-      line-height: 1.32;
-      word-break: break-word;
-    }
-    .v-vi {
-      color: #80deea;
-      font-size: 10px;
-      font-weight: 400;
-      line-height: 1.3;
-      margin-top: 2px;
-      word-break: break-word;
-    }
-    .video-wrapper.pseudo-fs .v-fr,
-    .video-wrapper:fullscreen .v-fr,
-    .video-wrapper:-webkit-full-screen .v-fr { font-size: 12px; }
-    .video-wrapper.pseudo-fs .v-vi,
-    .video-wrapper:fullscreen .v-vi,
-    .video-wrapper:-webkit-full-screen .v-vi { font-size: 11px; }
-
-    /* Cụm nút nổi trên góc video */
-    .floating-controls {
-      position: absolute;
-      top: 10px;
-      right: 12px;
-      z-index: 25;
-      display: flex;
-      gap: 6px;
-    }
-    .video-wrapper.has-vertical-sub .floating-controls {
-      right: calc(17% + 16px);
-    }
-    .video-wrapper.pseudo-fs.has-vertical-sub .floating-controls,
-    .video-wrapper:fullscreen.has-vertical-sub .floating-controls,
-    .video-wrapper:-webkit-full-screen.has-vertical-sub .floating-controls {
-      right: calc(12.5% + 18px);
-    }
-    .floating-btn {
-      background: rgba(0, 0, 0, 0.68);
-      color: #fff;
-      border: 1px solid rgba(255, 255, 255, 0.3);
-      padding: 6px 10px;
-      font-size: 12px;
-      border-radius: 6px;
-    }
-
-    .transcript-box {
-      margin-top: 14px;
-      max-height: 290px;
-      overflow-y: auto;
-      -webkit-overflow-scrolling: touch;
-      background: #1e1e1e;
-      border-radius: 10px;
-      padding: 8px;
-      border: 1px solid #2c2c2c;
-    }
-    .line {
-      padding: 10px;
-      border-radius: 6px;
-      cursor: pointer;
-      display: flex;
-      gap: 12px;
-      font-size: 15px;
-      border-bottom: 1px solid #262626;
-    }
-    .line.active { background: #332b00; }
-    .line.active .line-fr { color: #ffeb3b; font-weight: 600; }
-    .time { color: #888; min-width: 48px; font-family: monospace; padding-top: 2px; font-size: 13px; }
-    .line-vi { color: #80deea; font-size: 14px; margin-top: 3px; }
-
-    .ai-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin-top: 14px;
-    }
-    @media (max-width: 720px) { .ai-grid { grid-template-columns: 1fr; } }
-    textarea {
+      inset: 0;
       width: 100%;
-      height: 135px;
-      background: #141414;
-      color: #dcdcdc;
-      border: 1px solid #3c3c3c;
-      border-radius: 8px;
-      padding: 10px;
-      font-family: monospace;
-      font-size: 12px;
-      resize: vertical;
+      height: 100%;
+      border: 0;
     }
-    .box-header {
+
+    /* Thanh công cụ nằm tách biệt bên dưới khung video (Cách khắc phục 1) */
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      background: #1e293b;
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: 1px solid #334155;
+    }
+
+    .toolbar-group {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn {
+      background: #334155;
+      color: #f1f5f9;
+      border: 1px solid #475569;
+      padding: 8px 13px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+
+    .btn:hover {
+      background: #475569;
+    }
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    /* Trạng thái nút Ghim đang bật */
+    .btn.pinned {
+      background: #f59e0b;
+      color: #0f172a;
+      border-color: #fbbf24;
+      font-weight: 700;
+    }
+
+    /* Trạng thái nút Lặp câu / Phụ đề đang bật */
+    .btn.active {
+      background: #2563eb;
+      border-color: #3b82f6;
+      color: #fff;
+    }
+
+    .btn-success {
+      background: #059669;
+      border-color: #10b981;
+    }
+
+    .btn-success:hover {
+      background: #047857;
+    }
+
+    .btn-danger {
+      background: #dc2626;
+      border-color: #ef4444;
+    }
+
+    .btn-danger:hover {
+      background: #b91c1c;
+    }
+
+    /* Khu vực hiển thị phụ đề tiếng Pháp */
+    .subtitle-box {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 10px;
+      padding: 18px 20px;
+      min-height: 84px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+
+    .subtitle-box:hover {
+      border-color: #60a5fa;
+    }
+
+    .subtitle-box.hidden {
+      display: none;
+    }
+
+    .subtitle-text {
+      font-size: 20px;
+      line-height: 1.5;
+      font-weight: 500;
+      color: #f8fafc;
+    }
+
+    .subtitle-hint {
+      margin-top: 6px;
+      font-size: 12px;
+      color: #94a3b8;
+    }
+
+    .video-meta {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 6px;
-      font-weight: 600;
+      font-size: 13px;
+      color: #94a3b8;
+      padding: 0 4px;
     }
-    #status { color: #4caf50; font-size: 13px; line-height: 1.4; }
+
+    /* Khi bật Toàn màn hình cho toàn bộ khu vực học */
+    .app-container:fullscreen {
+      max-width: 100%;
+      height: 100vh;
+      background: #000;
+      padding: 12px;
+      justify-content: center;
+    }
+
+    .app-container:fullscreen .video-wrapper {
+      flex: 1;
+      aspect-ratio: auto;
+    }
   </style>
 </head>
 <body>
 
-  <!-- BẢNG ĐIỀU KHIỂN CHÍNH -->
-  <div class="panel">
-    <div class="row">
-      <select id="videoSelect"><option value="">-- Đang mở kho dữ liệu trên iPad... --</option></select>
-      <button type="button" class="btn-purple" id="randomBtn">🎲 Random</button>
-      <button type="button" class="btn-green" id="confirmWatchedBtn">✓ Xác nhận đã xem</button>
+  <div class="app-container" id="app-container">
+    <!-- Thông tin video hiện tại -->
+    <div class="video-meta">
+      <span id="video-title">Chưa có dữ liệu — Hãy bấm "Tải file" để nạp JSON</span>
+      <span id="video-stats">Còn lại: 0 | Đã xem: 0</span>
     </div>
 
-    <div class="row">
-      <button type="button" class="btn-blue" id="toggleFrBtn">🇫🇷 Pháp: BẬT</button>
-      <button type="button" class="btn-blue" id="toggleViBtn">🇻🇳 Việt: BẬT</button>
-      <button type="button" class="btn-teal" id="toggleLayoutBtn">📐 Kiểu PĐ: Ngang</button>
-      <button type="button" class="btn-yellow" id="toggleFsBtn">⛶ Toàn màn hình</button>
+    <!-- Khung Video YouTube (Không còn nút nổi đè lên góc phải dưới) -->
+    <div class="video-wrapper">
+      <div id="player"></div>
     </div>
 
-    <div id="status">Đang kiểm tra dữ liệu lưu trong IndexedDB...</div>
-
-    <!-- QUẢN LÝ KHO DỮ LIỆU DUY NHẤT (INDEXEDDB) -->
-    <details id="dataManagerBox">
-      <summary>💾 Kho dữ liệu trên iPad (Nạp 1 lần / Xuất sao lưu / Khôi phục)</summary>
-      <div class="db-grid">
-        <div class="row">
-          <label>📥 <b>Nạp file dữ liệu duy nhất</b> (<code>du_lieu_tong_hop.json</code>):
-            <input type="file" id="unifiedFileInput" accept=".json,application/json">
-          </label>
-        </div>
-        <div class="row">
-          <button type="button" class="btn-blue" id="exportUnifiedBtn">📤 Xuất 1 file JSON mới nhất</button>
-          <button type="button" class="btn-gray" id="resetHistoryBtn">↺ Khôi phục lịch sử đã xem</button>
-          <button type="button" class="btn-red" id="clearDbBtn">🗑️ Xóa sạch bộ nhớ web</button>
-        </div>
-        <div class="row" style="border-top: 1px solid #2b2b2b; padding-top: 8px;">
-          <label>Hoặc chọn phát file <b>.mp4</b> offline trên iPad:
-            <input type="file" id="localVideoInput" accept="video/*">
-          </label>
-        </div>
+    <!-- Thanh điều khiển bên dưới video -->
+    <div class="toolbar">
+      <!-- Nhóm nút tính năng học & ghim -->
+      <div class="toolbar-group">
+        <button id="btn-pin" class="btn" onclick="togglePinVideo()" title="Ghim video này để lần sau mở web vẫn giữ nguyên">
+          📌 Ghim video
+        </button>
+        <button id="btn-loop" class="btn" onclick="toggleLoopSentence()" title="Lặp lại câu phụ đề hiện tại">
+          🔁 Lặp câu
+        </button>
+        <button id="btn-sub" class="btn active" onclick="toggleSubtitleBox()" title="Ẩn/hiện khung phụ đề tiếng Pháp">
+          💬 PĐ
+        </button>
+        <button id="btn-fullscreen" class="btn" onclick="toggleFullScreen()" title="Toàn màn hình kèm phụ đề">
+          ⛶ Toàn màn hình
+        </button>
       </div>
-    </details>
-  </div>
 
-  <!-- Vùng đệm kích hoạt cuộn ẩn thanh địa chỉ Brave -->
-  <div class="brave-scroll-spacer" id="braveSpacer">⬆ Vuốt lên tại đây để ẩn thanh địa chỉ Brave</div>
-
-  <!-- KHUNG PHÁT VIDEO -->
-  <div class="video-wrapper" id="videoWrapper">
-    <div class="floating-controls">
-      <button type="button" class="floating-btn" id="floatingLayoutBtn">📐 PĐ: Ngang</button>
-      <button type="button" class="floating-btn" id="floatingFsBtn">⛶ Toàn màn hình</button>
-    </div>
-    <video id="html5Video" controls playsinline webkit-playsinline></video>
-    <div id="ytPlayer" style="display:none;"></div>
-    <div id="subtitleOverlay" class="subtitle-overlay mode-horizontal">
-      <div id="subtitleBox" class="subtitle-box"></div>
-    </div>
-  </div>
-
-  <!-- DỊCH PHỤ ĐỀ QUA AI TRỰC TIẾP TRÊN IPAD -->
-  <div class="ai-grid">
-    <div class="panel" style="margin-bottom:0;">
-      <div class="box-header">
-        <span>1. Prompt + Phụ đề gốc (Gửi AI)</span>
-        <button type="button" class="btn-blue" id="copyRawBtn">📋 Copy trọn bộ</button>
+      <!-- Nhóm nút điều hướng & dữ liệu -->
+      <div class="toolbar-group">
+        <button class="btn" onclick="playNextRandomVideo()" title="Chuyển sang video ngẫu nhiên khác">
+          ⏭ Đổi video
+        </button>
+        <button class="btn btn-success" onclick="markVideoStatus('watched')" title="Đánh dấu đã xem và chuyển video">
+          ✅ Đã xem
+        </button>
+        <button class="btn btn-danger" onclick="markVideoStatus('skipped')" title="Bỏ qua video này">
+          ⏩ Bỏ qua
+        </button>
+        <label class="btn" style="cursor: pointer;" title="Nạp file du_lieu_tong_hop.json">
+          📂 <span id="btn-load-label">Tải file (0)</span>
+          <input type="file" id="file-input" accept=".json" style="display: none;" onchange="handleFileUpload(event)" />
+        </label>
+        <button class="btn" onclick="exportUpdatedJson()" title="Tải về file JSON đã cập nhật tiến độ">
+          💾 Lưu JSON
+        </button>
       </div>
-      <textarea id="exportBox" readonly placeholder="Chọn video để tự động tạo Prompt..."></textarea>
     </div>
 
-    <div class="panel" style="margin-bottom:0;">
-      <div class="box-header">
-        <span>2. Dán JSON từ AI vào đây</span>
-        <button type="button" class="btn-green" id="saveSubBtn">💾 Lưu vào iPad</button>
-      </div>
-      <textarea id="importBox" placeholder='Dán mảng JSON [{"i": 0, "fr": "...", "vi": "..."}] từ AI vào đây rồi bấm Lưu...'></textarea>
+    <!-- Khung hiển thị phụ đề đồng bộ -->
+    <div class="subtitle-box" id="subtitle-box" onclick="replayCurrentSentence()" title="Bấm vào câu để nghe lại">
+      <div class="subtitle-text" id="subtitle-text">...</div>
+      <div class="subtitle-hint">Bấm vào khung phụ đề để nghe lại câu hiện tại</div>
     </div>
   </div>
 
-  <!-- DANH SÁCH CÂU THOẠI -->
-  <div class="transcript-box" id="transcriptBox"></div>
-
+  <!-- Nạp YouTube IFrame API -->
+  <script src="https://www.youtube.com/iframe_api"></script>
   <script>
-    const AI_PROMPT = `Bạn là chuyên gia biên tập và dịch thuật phụ đề song ngữ Pháp - Việt cho video hội thoại/kể chuyện.
-Dưới đây là thông tin video (link, tiêu đề) và mảng JSON chứa bản chép lời tiếng Pháp tự động (ASR) kèm mốc thời gian.
+    const PINNED_KEY = 'yt_french_pinned_video_id';
+    const DATA_CACHE_KEY = 'yt_french_cached_data';
 
-NHIỆM VỤ CỦA BẠN:
-1. Đánh bóng tiếng Pháp (trường "fr"):
-   - Sửa các lỗi nhận diện giọng nói sai chính tả hoặc đồng âm (đặc biệt là tên riêng nhân vật, địa danh, từ mượn dựa theo ngữ cảnh câu chuyện và tiêu đề video).
-   - Bổ sung dấu câu (chấm, phẩy, hỏi, cảm thán) và viết hoa đúng chuẩn ngữ pháp tiếng Pháp.
-   - Giữ nguyên số lượng dòng và đúng chỉ số "i" của từng dòng để không lệch mốc thời gian.
-2. Dịch sang tiếng Việt (trường "vi"):
-   - Dịch tự nhiên, sát nghĩa, đúng xưng hô và ngữ cảnh của toàn đoạn hội thoại.
-   - Mỗi dòng "vi" phải tương ứng với đúng phần lời thoại ở dòng "fr" cùng chỉ số "i" (nếu một câu dài bị ngắt qua 2-3 mốc thời gian, hãy chia vế dịch tiếng Việt khớp với từng mốc).
-   - Chuyển các thẻ âm thanh như [Musique] -> [Âm nhạc], [Rires] -> [Tiếng cười].
+    let player = null;
+    let isPlayerReady = false;
+    let allData = { videos: [], skipped_ids: [], watched_ids: [] };
+    let currentVideo = null;
+    let currentSubtitles = [];
+    let activeSubIndex = -1;
+    let isLoopingSentence = false;
+    let isSubtitleVisible = true;
+    let syncTimer = null;
 
-ĐỊNH DẠNG ĐẦU RA BẮT BUỘC:
-- Chỉ trả về DUY NHẤT một khối mã JSON hợp lệ theo khuôn mẫu sau, không thêm bất kỳ lời giải thích hay văn bản nào bên ngoài khối JSON:
-
-[
-  {"i": 0, "fr": "Câu tiếng Pháp đã sửa chuẩn.", "vi": "Câu dịch tiếng Việt tương ứng."},
-  {"i": 1, "fr": "Câu tiếp theo...", "vi": "Bản dịch tiếp theo..."}
-]
-
-DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
-
-    const DB_NAME = 'YtFrenchLearningDB';
-    const STORE_NAME = 'mainStore';
-    const DB_KEY = 'unified_dataset';
-    const LAYOUT_PREF_KEY = 'yt_fr_sub_layout_mode';
-
-    let dbState = { updated_at: '', skipped_ids: [], watched_ids: [], videos: [] };
-    let videoMap = {};
-    let watchedSet = new Set();
-
-    let currentVideoId = '';
-    let currentTranscript = [];
-    let activeIndex = -1;
-    let ytPlayer = null;
-    let isUsingYouTube = false;
-    let showFr = true;
-    let showVi = true;
-    let subLayout = localStorage.getItem(LAYOUT_PREF_KEY) || 'horizontal';
-
-    const videoWrapper = document.getElementById('videoWrapper');
-    const html5Video = document.getElementById('html5Video');
-    const ytDiv = document.getElementById('ytPlayer');
-    const videoSelect = document.getElementById('videoSelect');
-    const subtitleOverlay = document.getElementById('subtitleOverlay');
-    const transcriptBox = document.getElementById('transcriptBox');
-    const exportBox = document.getElementById('exportBox');
-    const importBox = document.getElementById('importBox');
-    const statusEl = document.getElementById('status');
-    const confirmWatchedBtn = document.getElementById('confirmWatchedBtn');
-    const toggleLayoutBtn = document.getElementById('toggleLayoutBtn');
-    const floatingLayoutBtn = document.getElementById('floatingLayoutBtn');
-    const floatingFsBtn = document.getElementById('floatingFsBtn');
-
-    function openIDB() {
-      return new Promise((resolve, reject) => {
-        const req = indexedDB.open(DB_NAME, 1);
-        req.onupgradeneeded = () => req.result.createObjectStore(STORE_NAME);
-        req.onsuccess = () => resolve(req.result);
-        req.onerror = () => reject(req.error);
-      });
+    // 1. Khởi tạo YouTube Player khi API sẵn sàng
+    function onYouTubeIframeAPIReady() {
+      isPlayerReady = true;
+      restoreFromCache();
     }
 
-    async function saveToIDB() {
-      dbState.updated_at = new Date().toISOString();
-      dbState.watched_ids = [...watchedSet];
-      dbState.videos = Object.values(videoMap);
-      const db = await openIDB();
-      return new Promise((resolve, reject) => {
-        const tx = db.transaction(STORE_NAME, 'readwrite');
-        tx.objectStore(STORE_NAME).put(dbState, DB_KEY);
-        tx.oncomplete = () => resolve();
-        tx.onerror = () => reject(tx.error);
-      });
-    }
+    // 2. Khôi phục dữ liệu & video đã ghim khi mở lại web
+    function restoreFromCache() {
+      const cached = localStorage.getItem(DATA_CACHE_KEY);
+      if (!cached) return;
 
-    async function loadFromIDB() {
-      const db = await openIDB();
-      return new Promise((resolve) => {
-        const req = db.transaction(STORE_NAME, 'readonly').objectStore(STORE_NAME).get(DB_KEY);
-        req.onsuccess = () => resolve(req.result || null);
-        req.onerror = () => resolve(null);
-      });
-    }
+      try {
+        const parsed = JSON.parse(cached);
+        allData = normalizeData(parsed);
+        updateStatsUI();
 
-    function hydrateState(raw) {
-      dbState = {
-        updated_at: raw?.updated_at || '',
-        skipped_ids: Array.isArray(raw?.skipped_ids) ? raw.skipped_ids : [],
-        watched_ids: Array.isArray(raw?.watched_ids) ? raw.watched_ids : [],
-        videos: []
-      };
-      watchedSet = new Set(dbState.watched_ids);
-      videoMap = {};
-      const list = Array.isArray(raw?.videos) ? raw.videos : (Array.isArray(raw) ? raw : []);
-      list.forEach(item => { if (item && item.id) videoMap[item.id] = item; });
-      dbState.videos = Object.values(videoMap);
-    }
-
-    function applyLayoutMode() {
-      const isVert = subLayout === 'vertical';
-      subtitleOverlay.className = isVert ? 'subtitle-overlay mode-vertical' : 'subtitle-overlay mode-horizontal';
-      videoWrapper.classList.toggle('has-vertical-sub', isVert);
-      toggleLayoutBtn.textContent = isVert ? '📐 Kiểu PĐ: Dọc' : '📐 Kiểu PĐ: Ngang';
-      floatingLayoutBtn.textContent = isVert ? '📐 PĐ: Dọc' : '📐 PĐ: Ngang';
-      renderOverlayStructure();
-      activeIndex = -1;
-      syncSubtitle(true);
-    }
-
-    function toggleLayoutMode() {
-      subLayout = subLayout === 'horizontal' ? 'vertical' : 'horizontal';
-      localStorage.setItem(LAYOUT_PREF_KEY, subLayout);
-      applyLayoutMode();
-    }
-
-    toggleLayoutBtn.addEventListener('click', toggleLayoutMode);
-    floatingLayoutBtn.addEventListener('click', toggleLayoutMode);
-
-    function renderOverlayStructure() {
-      if (subLayout === 'horizontal') {
-        subtitleOverlay.innerHTML = '<div id="subtitleBox" class="subtitle-box"></div>';
-        return;
+        const initialVideo = pickInitialVideo();
+        if (initialVideo) {
+          loadVideo(initialVideo);
+        }
+      } catch (e) {
+        console.error('Lỗi đọc cache:', e);
       }
-      subtitleOverlay.innerHTML = '';
-      if (!currentTranscript.length) return;
-      currentTranscript.forEach((item, idx) => {
-        const fr = item.fr || item.text || '';
-        const vi = item.vi || '';
-        const row = document.createElement('div');
-        row.className = 'v-sub-item';
-        row.id = 'vsub-' + idx;
-        let inner = `<span class="v-time">${escapeHtml(item.time || item.start.toFixed(0) + 's')}</span>`;
-        if (showFr && fr) inner += `<div class="v-fr">${escapeHtml(fr)}</div>`;
-        if (showVi && vi) inner += `<div class="v-vi">${escapeHtml(vi)}</div>`;
-        row.innerHTML = inner;
-        row.onclick = (e) => { e.stopPropagation(); seekTo(item.start); };
-        subtitleOverlay.appendChild(row);
-      });
     }
 
-    window.addEventListener('DOMContentLoaded', async () => {
-      applyLayoutMode();
-      const saved = await loadFromIDB();
-      if (saved && Array.isArray(saved.videos) && saved.videos.length > 0) {
-        hydrateState(saved);
-        refreshDropdown('', true);
-        const rem = getAvailableIds().length;
-        statusEl.textContent = `✓ Đã nạp từ bộ nhớ iPad: Còn lại ${rem} video chưa xem (Đã xem: ${watchedSet.size} / Tổng: ${dbState.videos.length}).`;
+    // Chuẩn hóa cấu trúc dữ liệu từ du_lieu_tong_hop.json
+    function normalizeData(raw) {
+      if (Array.isArray(raw)) {
+        return { videos: raw, skipped_ids: [], watched_ids: [] };
+      }
+      return {
+        videos: raw.videos || [],
+        skipped_ids: raw.skipped_ids || [],
+        watched_ids: raw.watched_ids || []
+      };
+    }
+
+    // 3. Chọn video khi mở web: Ưu tiên tuyệt đối video đang được ghim
+    function pickInitialVideo() {
+      if (!allData.videos.length) return null;
+
+      const pinnedId = localStorage.getItem(PINNED_KEY);
+      if (pinnedId) {
+        const pinnedVideo = allData.videos.find(v => v.id === pinnedId);
+        if (pinnedVideo) {
+          return pinnedVideo;
+        }
+      }
+
+      return getRandomAvailableVideo();
+    }
+
+    function getRandomAvailableVideo() {
+      const available = allData.videos.filter(
+        v => !allData.skipped_ids.includes(v.id) && !allData.watched_ids.includes(v.id)
+      );
+      if (!available.length) return allData.videos[0] || null;
+      return available[Math.floor(Math.random() * available.length)];
+    }
+
+    // 4. Nạp video vào YouTube Player
+    function loadVideo(video) {
+      if (!video) return;
+      currentVideo = video;
+      currentSubtitles = extractSubtitles(video);
+      activeSubIndex = -1;
+
+      document.getElementById('video-title').textContent = video.title || `Video ID: ${video.id}`;
+      document.getElementById('subtitle-text').textContent = currentSubtitles.length
+        ? 'Đang phát video...'
+        : 'Video này chưa có dữ liệu phụ đề trong JSON';
+
+      updatePinButtonUI();
+
+      if (!isPlayerReady) return;
+
+      if (player) {
+        player.loadVideoById(video.id);
       } else {
-        document.getElementById('dataManagerBox').open = true;
-        statusEl.textContent = 'Chưa có dữ liệu trên iPad. Hãy mở mục "Kho dữ liệu" bên dưới để nạp file du_lieu_tong_hop.json.';
+        player = new YT.Player('player', {
+          videoId: video.id,
+          playerVars: {
+            autoplay: 1,
+            controls: 1,
+            cc_load_policy: 0, // Tắt tự bật phụ đề gốc của YouTube
+            hl: 'fr',
+            rel: 0,
+            modestbranding: 1
+          },
+          events: {
+            onReady: (e) => {
+              forceDisableYouTubeCaptions(e);
+              startSubtitleSync();
+            },
+            onStateChange: (e) => {
+              if (e.data === YT.PlayerState.PLAYING) {
+                forceDisableYouTubeCaptions(e);
+              }
+            }
+          }
+        });
       }
-    });
+    }
 
-    document.getElementById('unifiedFileInput').addEventListener('change', e => {
-      const file = e.target.files[0];
+    // Ép tắt module phụ đề gốc của YouTube để không bị chồng chữ
+    function forceDisableYouTubeCaptions(event) {
+      const yt = event?.target || player;
+      if (!yt) return;
+      try {
+        yt.unloadModule('captions');
+        yt.unloadModule('cc');
+      } catch (e) {}
+    }
+
+    // 5. Tính năng GHIM VIDEO
+    function togglePinVideo() {
+      if (!currentVideo) return;
+      const currentPinnedId = localStorage.getItem(PINNED_KEY);
+
+      if (currentPinnedId === currentVideo.id) {
+        localStorage.removeItem(PINNED_KEY);
+      } else {
+        localStorage.setItem(PINNED_KEY, currentVideo.id);
+        saveCache();
+      }
+      updatePinButtonUI();
+    }
+
+    function updatePinButtonUI() {
+      const btn = document.getElementById('btn-pin');
+      if (!btn) return;
+
+      const isPinned = currentVideo && localStorage.getItem(PINNED_KEY) === currentVideo.id;
+      if (isPinned) {
+        btn.classList.add('pinned');
+        btn.innerHTML = '📌 Đã ghim';
+      } else {
+        btn.classList.remove('pinned');
+        btn.innerHTML = '📌 Ghim video';
+      }
+    }
+
+    // 6. Đồng bộ phụ đề & Lặp câu
+    function extractSubtitles(video) {
+      const list = video.subtitles || video.transcript || video.captions || video.segments || [];
+      return list.map((item, idx) => {
+        const start = Number(item.start ?? item.startTime ?? 0);
+        const end = item.end !== undefined
+          ? Number(item.end)
+          : (item.dur !== undefined ? start + Number(item.dur) : (list[idx + 1]?.start ?? start + 4));
+        return {
+          start,
+          end,
+          text: item.text || item.content || item.fr || ''
+        };
+      });
+    }
+
+    function startSubtitleSync() {
+      if (syncTimer) clearInterval(syncTimer);
+      syncTimer = setInterval(() => {
+        if (!player || typeof player.getCurrentTime !== 'function' || !currentSubtitles.length) return;
+        const currentTime = player.getCurrentTime();
+
+        // Nếu đang bật lặp câu và đã chạy hết câu hiện tại -> tua lại đầu câu
+        if (isLoopingSentence && activeSubIndex >= 0) {
+          const lockedSub = currentSubtitles[activeSubIndex];
+          if (lockedSub && currentTime >= lockedSub.end) {
+            player.seekTo(lockedSub.start, true);
+            return;
+          }
+        }
+
+        const foundIdx = currentSubtitles.findIndex(
+          s => currentTime >= s.start && currentTime <= s.end
+        );
+
+        if (foundIdx !== -1 && foundIdx !== activeSubIndex) {
+          activeSubIndex = foundIdx;
+          document.getElementById('subtitle-text').textContent = currentSubtitles[foundIdx].text;
+        }
+      }, 100);
+    }
+
+    function toggleLoopSentence() {
+      isLoopingSentence = !isLoopingSentence;
+      const btn = document.getElementById('btn-loop');
+      btn.classList.toggle('active', isLoopingSentence);
+    }
+
+    function replayCurrentSentence() {
+      if (!player || activeSubIndex < 0 || !currentSubtitles[activeSubIndex]) return;
+      player.seekTo(currentSubtitles[activeSubIndex].start, true);
+      player.playVideo();
+    }
+
+    function toggleSubtitleBox() {
+      isSubtitleVisible = !isSubtitleVisible;
+      document.getElementById('subtitle-box').classList.toggle('hidden', !isSubtitleVisible);
+      document.getElementById('btn-sub').classList.toggle('active', isSubtitleVisible);
+    }
+
+    function toggleFullScreen() {
+      const container = document.getElementById('app-container');
+      if (!document.fullscreenElement) {
+        container.requestFullscreen().catch(() => {});
+      } else {
+        document.exitFullscreen().catch(() => {});
+      }
+    }
+
+    // 7. Chuyển video, đánh dấu Đã xem / Bỏ qua & Nạp/Xuất JSON
+    function playNextRandomVideo() {
+      const next = getRandomAvailableVideo();
+      if (next) loadVideo(next);
+    }
+
+    function markVideoStatus(type) {
+      if (!currentVideo) return;
+      const id = currentVideo.id;
+
+      // Nếu video đang được ghim mà người dùng bấm Đã xem / Bỏ qua -> tự động bỏ ghim
+      if (localStorage.getItem(PINNED_KEY) === id) {
+        localStorage.removeItem(PINNED_KEY);
+      }
+
+      if (type === 'watched' && !allData.watched_ids.includes(id)) {
+        allData.watched_ids.push(id);
+      } else if (type === 'skipped' && !allData.skipped_ids.includes(id)) {
+        allData.skipped_ids.push(id);
+      }
+
+      saveCache();
+      updateStatsUI();
+      playNextRandomVideo();
+    }
+
+    function handleFileUpload(event) {
+      const file = event.target.files[0];
       if (!file) return;
-      const reader = new FileReader();
-      reader.onload = async ev => {
-        try {
-          hydrateState(JSON.parse(ev.target.result));
-          await saveToIDB();
-          document.getElementById('dataManagerBox').open = false;
-          refreshDropdown('', true);
-          statusEl.textContent = `✓ Đã lưu ${dbState.videos.length} video vào bộ nhớ iPad.`;
-        } catch (err) { alert('Lỗi đọc file JSON: ' + err.message); }
-      };
-      reader.readAsText(file, 'UTF-8');
-    });
 
-    document.getElementById('exportUnifiedBtn').addEventListener('click', async () => {
-      await saveToIDB();
-      const blob = new Blob([JSON.stringify(dbState, null, 2)], { type: 'application/json;charset=utf-8' });
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const parsed = JSON.parse(e.target.result);
+          allData = normalizeData(parsed);
+          saveCache();
+          updateStatsUI();
+
+          const videoToPlay = pickInitialVideo();
+          if (videoToPlay) loadVideo(videoToPlay);
+        } catch (err) {
+          alert('File JSON không hợp lệ!');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function saveCache() {
+      localStorage.setItem(DATA_CACHE_KEY, JSON.stringify(allData));
+    }
+
+    function updateStatsUI() {
+      const remaining = allData.videos.filter(
+        v => !allData.skipped_ids.includes(v.id) && !allData.watched_ids.includes(v.id)
+      ).length;
+
+      document.getElementById('btn-load-label').textContent = `Tải file (${remaining})`;
+      document.getElementById('video-stats').textContent =
+        `Còn lại: ${remaining} | Đã xem: ${allData.watched_ids.length} | Bỏ qua: ${allData.skipped_ids.length}`;
+    }
+
+    function exportUpdatedJson() {
+      const blob = new Blob([JSON.stringify(allData, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       a.download = 'du_lieu_tong_hop.json';
-      document.body.appendChild(a);
       a.click();
-      a.remove();
       URL.revokeObjectURL(url);
-      statusEl.textContent = '✓ Đã xuất file du_lieu_tong_hop.json mới nhất.';
-    });
-
-    document.getElementById('resetHistoryBtn').addEventListener('click', async () => {
-      if (!confirm('Đưa toàn bộ video đã xem quay trở lại danh sách học?')) return;
-      watchedSet.clear();
-      await saveToIDB();
-      refreshDropdown('', true);
-      statusEl.textContent = `✓ Đã khôi phục toàn bộ ${dbState.videos.length} video.`;
-    });
-
-    document.getElementById('clearDbBtn').addEventListener('click', async () => {
-      if (!confirm('Xóa toàn bộ dữ liệu đã lưu trong trình duyệt này?')) return;
-      hydrateState({});
-      await saveToIDB();
-      refreshDropdown('', true);
-      statusEl.textContent = 'Đã xóa sạch dữ liệu.';
-    });
-
-    const toggleFrBtn = document.getElementById('toggleFrBtn');
-    const toggleViBtn = document.getElementById('toggleViBtn');
-
-    toggleFrBtn.addEventListener('click', () => {
-      showFr = !showFr;
-      toggleFrBtn.textContent = `🇫🇷 Pháp: ${showFr ? 'BẬT' : 'TẮT'}`;
-      toggleFrBtn.className = showFr ? 'btn-blue' : 'btn-off';
-      if (subLayout === 'vertical') renderOverlayStructure();
-      activeIndex = -1;
-      syncSubtitle(true);
-    });
-
-    toggleViBtn.addEventListener('click', () => {
-      showVi = !showVi;
-      toggleViBtn.textContent = `🇻🇳 Việt: ${showVi ? 'BẬT' : 'TẮT'}`;
-      toggleViBtn.className = showVi ? 'btn-blue' : 'btn-off';
-      if (subLayout === 'vertical') renderOverlayStructure();
-      activeIndex = -1;
-      syncSubtitle(true);
-    });
-
-    // --- TOÀN MÀN HÌNH + TỰ CUỘN ẨN THANH ĐỊA CHỈ BRAVE ---
-    function enterBravePseudoFullscreen() {
-      document.body.classList.add('brave-fs-body');
-      videoWrapper.classList.add('pseudo-fs');
-      floatingFsBtn.textContent = '✕ Thoát toàn MH';
-      requestAnimationFrame(() => {
-        window.scrollTo({ top: 140, behavior: 'smooth' });
-      });
     }
-
-    function exitBravePseudoFullscreen() {
-      document.body.classList.remove('brave-fs-body');
-      videoWrapper.classList.remove('pseudo-fs');
-      floatingFsBtn.textContent = '⛶ Toàn màn hình';
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    function toggleFullscreen() {
-      const nativeFs = document.fullscreenElement || document.webkitFullscreenElement;
-      if (nativeFs) {
-        (document.exitFullscreen || document.webkitExitFullscreen)?.call(document);
-        exitBravePseudoFullscreen();
-        return;
-      }
-      if (videoWrapper.classList.contains('pseudo-fs')) {
-        exitBravePseudoFullscreen();
-        return;
-      }
-
-      const reqFs = videoWrapper.requestFullscreen || videoWrapper.webkitRequestFullscreen;
-      if (reqFs) {
-        try {
-          const p = reqFs.call(videoWrapper);
-          if (p && typeof p.catch === 'function') {
-            p.catch(() => enterBravePseudoFullscreen());
-          }
-        } catch {
-          enterBravePseudoFullscreen();
-        }
-      } else {
-        enterBravePseudoFullscreen();
-      }
-    }
-    document.getElementById('toggleFsBtn').addEventListener('click', toggleFullscreen);
-    floatingFsBtn.addEventListener('click', toggleFullscreen);
-
-    function getAvailableIds() {
-      return Object.keys(videoMap).filter(id => !watchedSet.has(id));
-    }
-
-    document.getElementById('randomBtn').addEventListener('click', () => {
-      const available = getAvailableIds();
-      if (!available.length) { alert('Không còn video chưa xem nào trong danh sách!'); return; }
-      let candidates = available.filter(id => id !== currentVideoId);
-      if (!candidates.length) candidates = available;
-      const randomId = candidates[Math.floor(Math.random() * candidates.length)];
-      videoSelect.value = randomId;
-      loadSelectedVideo(randomId);
-      statusEl.textContent = `🎲 Đã chọn ngẫu nhiên [${randomId}] (Còn ${available.length} video chưa xem).`;
-    });
-
-    confirmWatchedBtn.addEventListener('click', async () => {
-      if (!currentVideoId) return;
-      const doneId = currentVideoId;
-      watchedSet.add(doneId);
-      await saveToIDB();
-      refreshDropdown('', true);
-      statusEl.textContent = `✓ Đã xác nhận xong [${doneId}] (Còn lại ${getAvailableIds().length} video chưa xem).`;
-    });
-
-    function refreshDropdown(keepId = '', reloadPlayer = true) {
-      const availableIds = getAvailableIds();
-      videoSelect.innerHTML = '';
-      if (!availableIds.length) {
-        const opt = document.createElement('option');
-        opt.value = '';
-        opt.textContent = Object.keys(videoMap).length > 0 ? '-- Đã xem hết toàn bộ video! --' : '-- Chưa có dữ liệu --';
-        videoSelect.appendChild(opt);
-        currentVideoId = '';
-        currentTranscript = [];
-        renderOverlayStructure();
-        transcriptBox.innerHTML = '';
-        exportBox.value = '';
-        confirmWatchedBtn.disabled = true;
-        return;
-      }
-      confirmWatchedBtn.disabled = false;
-      availableIds.forEach(id => {
-        const info = videoMap[id];
-        const tr = info.transcript || [];
-        const hasVi = tr.some(line => line.vi && line.vi.trim() !== '');
-        const tag = hasVi ? '★ Song ngữ' : (tr.length ? '✓ Pháp' : '✗ Trống');
-        const opt = document.createElement('option');
-        opt.value = id;
-        opt.textContent = `[${id}] ${info.title || 'Không tiêu đề'} (${tag})`;
-        videoSelect.appendChild(opt);
-      });
-      if (keepId && availableIds.includes(keepId)) videoSelect.value = keepId;
-      if (reloadPlayer) loadSelectedVideo(videoSelect.value);
-    }
-
-    videoSelect.addEventListener('change', () => loadSelectedVideo(videoSelect.value));
-
-    function loadSelectedVideo(id) {
-      if (!id || !videoMap[id]) return;
-      currentVideoId = id;
-      const item = videoMap[id];
-      currentTranscript = item.transcript || [];
-      activeIndex = -1;
-      importBox.value = '';
-      renderOverlayStructure();
-      renderTranscriptList();
-      populateExportBox(item);
-      const rawUrl = item.url || '';
-      if (rawUrl && !rawUrl.includes('youtube.com') && !rawUrl.includes('youtu.be')) {
-        switchToHtml5(rawUrl);
-      } else {
-        switchToYouTube(id);
-      }
-    }
-
-    document.getElementById('localVideoInput').addEventListener('change', e => {
-      const file = e.target.files[0];
-      if (!file) return;
-      switchToHtml5(URL.createObjectURL(file));
-      statusEl.textContent = 'Đang phát file offline: ' + file.name;
-    });
-
-    function populateExportBox(item) {
-      const url = item.url || `https://www.youtube.com/watch?v=${item.id}`;
-      const compactLines = (item.transcript || []).map((line, idx) => ({
-        i: idx, time: line.time || '', start: line.start, end: line.end, fr: line.fr || line.text || ''
-      }));
-      exportBox.value = `${AI_PROMPT}\nLink video: ${url}\nTiêu đề: ${item.title || ''}\n\n${JSON.stringify(compactLines, null, 2)}`;
-    }
-
-    document.getElementById('copyRawBtn').addEventListener('click', async () => {
-      if (!exportBox.value) return;
-      try { await navigator.clipboard.writeText(exportBox.value); }
-      catch { exportBox.select(); document.execCommand('copy'); }
-      const btn = document.getElementById('copyRawBtn');
-      btn.textContent = '✓ Đã copy!';
-      setTimeout(() => btn.textContent = '📋 Copy trọn bộ', 1800);
-    });
-
-    document.getElementById('saveSubBtn').addEventListener('click', async () => {
-      if (!currentVideoId || !currentTranscript.length) { alert('Chưa có video hoặc phụ đề gốc!'); return; }
-      let rawText = importBox.value.trim();
-      if (!rawText) { alert('Hãy dán mảng JSON từ AI vào ô bên dưới trước khi bấm Lưu!'); return; }
-      rawText = rawText.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
-      let parsed;
-      try { parsed = JSON.parse(rawText); } catch (err) { alert('Lỗi JSON:\n' + err.message); return; }
-      if (!Array.isArray(parsed)) { alert('Dữ liệu JSON phải là một danh sách [...].'); return; }
-
-      const byIndex = {};
-      parsed.forEach((row, idx) => { byIndex[typeof row.i === 'number' ? row.i : idx] = row; });
-      let updatedCount = 0;
-      videoMap[currentVideoId].transcript = currentTranscript.map((orig, idx) => {
-        const aiRow = byIndex[idx];
-        if (aiRow) {
-          updatedCount++;
-          return {
-            time: orig.time, start: orig.start, end: orig.end,
-            fr: (aiRow.fr || aiRow.text || orig.fr || orig.text || '').trim(),
-            vi: (aiRow.vi || '').trim()
-          };
-        }
-        return orig;
-      });
-      await saveToIDB();
-      refreshDropdown(currentVideoId, true);
-      statusEl.textContent = `✓ Đã lưu bản dịch song ngữ (${updatedCount}/${currentTranscript.length} câu)!`;
-    });
-
-    function switchToHtml5(src) {
-      isUsingYouTube = false;
-      if (ytPlayer?.stopVideo) ytPlayer.stopVideo();
-      ytDiv.style.display = 'none';
-      html5Video.style.display = 'block';
-      html5Video.src = src;
-    }
-
-    function switchToYouTube(videoId) {
-      isUsingYouTube = true;
-      html5Video.pause();
-      html5Video.style.display = 'none';
-      ytDiv.style.display = 'block';
-      if (ytPlayer?.loadVideoById) {
-        ytPlayer.loadVideoById(videoId);
-      } else {
-        window.pendingYtId = videoId;
-        if (!document.getElementById('yt-api-script')) {
-          const tag = document.createElement('script');
-          tag.id = 'yt-api-script';
-          tag.src = 'https://www.youtube.com/iframe_api';
-          document.head.appendChild(tag);
-        }
-      }
-    }
-
-    window.onYouTubeIframeAPIReady = function () {
-      ytPlayer = new YT.Player('ytPlayer', {
-        videoId: window.pendingYtId || '',
-        playerVars: { playsinline: 1, fs: 0, rel: 0 }
-      });
-    };
-
-    function escapeHtml(str) {
-      return String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
-    }
-
-    function renderTranscriptList() {
-      transcriptBox.innerHTML = '';
-      currentTranscript.forEach((item, idx) => {
-        const fr = item.fr || item.text || '';
-        const vi = item.vi || '';
-        const div = document.createElement('div');
-        div.className = 'line';
-        div.id = 'line-' + idx;
-        div.innerHTML = `
-          <span class="time">${item.time || item.start.toFixed(1) + 's'}</span>
-          <div>
-            <div class="line-fr">${escapeHtml(fr)}</div>
-            ${vi ? `<div class="line-vi">${escapeHtml(vi)}</div>` : ''}
-          </div>
-        `;
-        div.onclick = () => seekTo(item.start);
-        transcriptBox.appendChild(div);
-      });
-    }
-
-    function seekTo(seconds) {
-      if (isUsingYouTube && ytPlayer?.seekTo) {
-        ytPlayer.seekTo(seconds, true);
-        ytPlayer.playVideo();
-      } else {
-        html5Video.currentTime = seconds;
-        html5Video.play();
-      }
-    }
-
-    function syncSubtitle(forceRender = false) {
-      if (!currentTranscript.length) return;
-      const currentTime = (isUsingYouTube && ytPlayer?.getCurrentTime)
-        ? ytPlayer.getCurrentTime()
-        : html5Video.currentTime;
-
-      const idx = currentTranscript.findIndex(item => currentTime >= item.start && currentTime <= item.end);
-      if (idx !== activeIndex || forceRender) {
-        if (activeIndex !== -1) {
-          document.getElementById('line-' + activeIndex)?.classList.remove('active');
-          document.getElementById('vsub-' + activeIndex)?.classList.remove('active');
-        }
-        activeIndex = idx;
-
-        if (subLayout === 'horizontal') {
-          const box = document.getElementById('subtitleBox');
-          if (!box) return;
-          if (idx !== -1) {
-            const item = currentTranscript[idx];
-            const fr = item.fr || item.text || '';
-            const vi = item.vi || '';
-            let html = '';
-            if (showFr && fr) html += `<div class="sub-fr">${escapeHtml(fr)}</div>`;
-            if (showVi && vi) html += `<div class="sub-vi">${escapeHtml(vi)}</div>`;
-            box.innerHTML = html;
-          } else {
-            box.innerHTML = '';
-          }
-        } else if (idx !== -1) {
-          const activeVSub = document.getElementById('vsub-' + idx);
-          if (activeVSub) {
-            activeVSub.classList.add('active');
-            const targetScroll = activeVSub.offsetTop - (subtitleOverlay.clientHeight / 2) + (activeVSub.clientHeight / 2);
-            subtitleOverlay.scrollTo({ top: Math.max(0, targetScroll), behavior: forceRender ? 'auto' : 'smooth' });
-          }
-        }
-
-        if (idx !== -1) {
-          const activeLine = document.getElementById('line-' + idx);
-          if (activeLine) {
-            activeLine.classList.add('active');
-            if (!forceRender) activeLine.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-          }
-        }
-      }
-    }
-
-    setInterval(syncSubtitle, 100);
-    html5Video.addEventListener('timeupdate', () => syncSubtitle(false));
   </script>
 </body>
 </html>
