@@ -57,6 +57,8 @@
     .btn-red { background: #d32f2f; color: #fff; }
     .btn-gray { background: #383838; color: #eee; }
     .btn-off { background: #242424; color: #777; border: 1px solid #383838; }
+    .btn-unpinned { background: #333; color: #ffd54f; border: 1px solid #555; }
+    .btn-pinned { background: #ff9800; color: #111; border: 1px solid #ffb74d; }
 
     details {
       background: #161616;
@@ -198,11 +200,12 @@
     .video-wrapper:fullscreen .v-vi,
     .video-wrapper:-webkit-full-screen .v-vi { font-size: 11px; }
 
-    /* Cụm nút nổi trên góc video */
+    /* Cách khắc phục 1: Dời 2 nút nổi xuống dưới thanh tiêu đề/chia sẻ YouTube (top: 56px) và tránh xa nút CC ở đáy */
     .floating-controls {
       position: absolute;
-      top: 10px;
+      top: 56px;
       right: 12px;
+      bottom: auto;
       z-index: 25;
       display: flex;
       gap: 6px;
@@ -286,6 +289,7 @@
   <div class="panel">
     <div class="row">
       <select id="videoSelect"><option value="">-- Đang mở kho dữ liệu trên iPad... --</option></select>
+      <button type="button" class="btn-unpinned" id="pinBtn" title="Ghim video này để lần sau mở web vẫn giữ nguyên">📌 Ghim</button>
       <button type="button" class="btn-purple" id="randomBtn">🎲 Random</button>
       <button type="button" class="btn-green" id="confirmWatchedBtn">✓ Xác nhận đã xem</button>
     </div>
@@ -363,13 +367,13 @@ Dưới đây là thông tin video (link, tiêu đề) và mảng JSON chứa b�
 
 NHIỆM VỤ CỦA BẠN:
 1. Đánh bóng tiếng Pháp (trường "fr"):
-   - Sửa các lỗi nhận diện giọng nói sai chính tả hoặc đồng âm (đặc biệt là tên riêng nhân vật, địa danh, từ mượn dựa theo ngữ cảnh câu chuyện và tiêu đề video).
-   - Bổ sung dấu câu (chấm, phẩy, hỏi, cảm thán) và viết hoa đúng chuẩn ngữ pháp tiếng Pháp.
-   - Giữ nguyên số lượng dòng và đúng chỉ số "i" của từng dòng để không lệch mốc thời gian.
+  - Sửa các lỗi nhận diện giọng nói sai chính tả hoặc đồng âm (đặc biệt là tên riêng nhân vật, địa danh, từ mượn dựa theo ngữ cảnh câu chuyện và tiêu đề video).
+  - Bổ sung dấu câu (chấm, phẩy, hỏi, cảm thán) và viết hoa đúng chuẩn ngữ pháp tiếng Pháp.
+  - Giữ nguyên số lượng dòng và đúng chỉ số "i" của từng dòng để không lệch mốc thời gian.
 2. Dịch sang tiếng Việt (trường "vi"):
-   - Dịch tự nhiên, sát nghĩa, đúng xưng hô và ngữ cảnh của toàn đoạn hội thoại.
-   - Mỗi dòng "vi" phải tương ứng với đúng phần lời thoại ở dòng "fr" cùng chỉ số "i" (nếu một câu dài bị ngắt qua 2-3 mốc thời gian, hãy chia vế dịch tiếng Việt khớp với từng mốc).
-   - Chuyển các thẻ âm thanh như [Musique] -> [Âm nhạc], [Rires] -> [Tiếng cười].
+  - Dịch tự nhiên, sát nghĩa, đúng xưng hô và ngữ cảnh của toàn đoạn hội thoại.
+  - Mỗi dòng "vi" phải tương ứng với đúng phần lời thoại ở dòng "fr" cùng chỉ số "i" (nếu một câu dài bị ngắt qua 2-3 mốc thời gian, hãy chia vế dịch tiếng Việt khớp với từng mốc).
+  - Chuyển các thẻ âm thanh như [Musique] -> [Âm nhạc], [Rires] -> [Tiếng cười].
 
 ĐỊNH DẠNG ĐẦU RA BẮT BUỘC:
 - Chỉ trả về DUY NHẤT một khối mã JSON hợp lệ theo khuôn mẫu sau, không thêm bất kỳ lời giải thích hay văn bản nào bên ngoài khối JSON:
@@ -386,9 +390,11 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
     const STORE_NAME = 'mainStore';
     const DB_KEY = 'unified_dataset';
     const LAYOUT_PREF_KEY = 'yt_fr_sub_layout_mode';
+    const PINNED_VIDEO_KEY = 'yt_fr_pinned_video_id';
 
     let dbState = {
       updated_at: '',
+      pinned_id: '',
       skipped_ids: [],
       watched_ids: [],
       videos: []
@@ -409,6 +415,7 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
     const html5Video = document.getElementById('html5Video');
     const ytDiv = document.getElementById('ytPlayer');
     const videoSelect = document.getElementById('videoSelect');
+    const pinBtn = document.getElementById('pinBtn');
     const subtitleOverlay = document.getElementById('subtitleOverlay');
     const subtitleBox = document.getElementById('subtitleBox');
     const transcriptBox = document.getElementById('transcriptBox');
@@ -418,6 +425,55 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
     const confirmWatchedBtn = document.getElementById('confirmWatchedBtn');
     const toggleLayoutBtn = document.getElementById('toggleLayoutBtn');
     const floatingLayoutBtn = document.getElementById('floatingLayoutBtn');
+
+    function getPinnedVideoId() {
+      return localStorage.getItem(PINNED_VIDEO_KEY) || dbState.pinned_id || '';
+    }
+
+    async function setPinnedVideoId(id) {
+      if (id) {
+        localStorage.setItem(PINNED_VIDEO_KEY, id);
+      } else {
+        localStorage.removeItem(PINNED_VIDEO_KEY);
+      }
+      dbState.pinned_id = id || '';
+      updatePinButtonUI();
+      if (Object.keys(videoMap).length > 0) {
+        await saveToIDB();
+      }
+    }
+
+    function updatePinButtonUI() {
+      const pinnedId = getPinnedVideoId();
+      if (!currentVideoId) {
+        pinBtn.disabled = true;
+        pinBtn.className = 'btn-unpinned';
+        pinBtn.textContent = '📌 Ghim';
+        return;
+      }
+      pinBtn.disabled = false;
+      if (pinnedId === currentVideoId) {
+        pinBtn.className = 'btn-pinned';
+        pinBtn.textContent = '📌 Đã ghim';
+      } else {
+        pinBtn.className = 'btn-unpinned';
+        pinBtn.textContent = '📌 Ghim';
+      }
+    }
+
+    pinBtn.addEventListener('click', async () => {
+      if (!currentVideoId) return;
+      const pinnedId = getPinnedVideoId();
+      if (pinnedId === currentVideoId) {
+        await setPinnedVideoId('');
+        refreshDropdown(currentVideoId, false);
+        statusEl.textContent = `Đã bỏ ghim video [${currentVideoId}].`;
+      } else {
+        await setPinnedVideoId(currentVideoId);
+        refreshDropdown(currentVideoId, false);
+        statusEl.textContent = `📌 Đã ghim [${currentVideoId}] — khi thoát web mở lại sẽ tự động giữ video này.`;
+      }
+    });
 
     function openIDB() {
       return new Promise((resolve, reject) => {
@@ -430,6 +486,7 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
 
     async function saveToIDB() {
       dbState.updated_at = new Date().toISOString();
+      dbState.pinned_id = getPinnedVideoId();
       dbState.watched_ids = [...watchedSet];
       dbState.videos = Object.values(videoMap);
       const db = await openIDB();
@@ -451,8 +508,15 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
     }
 
     function hydrateState(raw) {
+      const localPin = localStorage.getItem(PINNED_VIDEO_KEY) || '';
+      const resolvedPin = localPin || raw?.pinned_id || '';
+      if (resolvedPin) {
+        localStorage.setItem(PINNED_VIDEO_KEY, resolvedPin);
+      }
+
       dbState = {
         updated_at: raw?.updated_at || '',
+        pinned_id: resolvedPin,
         skipped_ids: Array.isArray(raw?.skipped_ids) ? raw.skipped_ids : [],
         watched_ids: Array.isArray(raw?.watched_ids) ? raw.watched_ids : [],
         videos: []
@@ -524,17 +588,20 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
       });
     }
 
-    // Khởi động: tự đọc dữ liệu đã lưu sẵn trên iPad
+    // Khởi động: tự đọc dữ liệu đã lưu sẵn trên iPad và ưu tiên mở video đã ghim
     window.addEventListener('DOMContentLoaded', async () => {
       applyLayoutMode();
       const saved = await loadFromIDB();
       if (saved && Array.isArray(saved.videos) && saved.videos.length > 0) {
         hydrateState(saved);
-        refreshDropdown('', true);
+        const pinnedId = getPinnedVideoId();
+        refreshDropdown(pinnedId, true);
         const rem = getAvailableIds().length;
-        statusEl.textContent = `✓ Đã nạp từ bộ nhớ iPad: Còn lại ${rem} video chưa xem (Đã xem: ${watchedSet.size} / Tổng: ${dbState.videos.length}).`;
+        const pinNote = (pinnedId && currentVideoId === pinnedId) ? ` | 📌 Đang mở video ghim [${pinnedId}]` : '';
+        statusEl.textContent = `✓ Đã nạp từ bộ nhớ iPad: Còn lại ${rem} video chưa xem (Đã xem: ${watchedSet.size} / Tổng: ${dbState.videos.length})${pinNote}.`;
       } else {
         document.getElementById('dataManagerBox').open = true;
+        updatePinButtonUI();
         statusEl.textContent = 'Chưa có dữ liệu trên iPad. Hãy mở mục "Kho dữ liệu" bên dưới để nạp file du_lieu_tong_hop.json 1 lần duy nhất.';
       }
     });
@@ -550,7 +617,7 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
           hydrateState(parsed);
           await saveToIDB();
           document.getElementById('dataManagerBox').open = false;
-          refreshDropdown('', true);
+          refreshDropdown(getPinnedVideoId(), true);
           const rem = getAvailableIds().length;
           statusEl.textContent = `✓ Đã lưu ${dbState.videos.length} video vào bộ nhớ iPad (Còn ${rem} video chưa xem).`;
         } catch (err) {
@@ -580,12 +647,13 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
       if (!confirm('Đưa toàn bộ video đã xem quay trở lại danh sách học?')) return;
       watchedSet.clear();
       await saveToIDB();
-      refreshDropdown('', true);
+      refreshDropdown(getPinnedVideoId(), true);
       statusEl.textContent = `✓ Đã khôi phục toàn bộ ${dbState.videos.length} video vào danh sách chưa xem.`;
     });
 
     document.getElementById('clearDbBtn').addEventListener('click', async () => {
       if (!confirm('Xóa toàn bộ dữ liệu đã lưu trong trình duyệt này?')) return;
+      await setPinnedVideoId('');
       hydrateState({});
       await saveToIDB();
       refreshDropdown('', true);
@@ -668,6 +736,10 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
       if (!currentVideoId) return;
       const doneId = currentVideoId;
       watchedSet.add(doneId);
+      if (getPinnedVideoId() === doneId) {
+        localStorage.removeItem(PINNED_VIDEO_KEY);
+        dbState.pinned_id = '';
+      }
       await saveToIDB();
       refreshDropdown('', true);
       statusEl.textContent = `✓ Đã xác nhận xong [${doneId}] (Còn lại ${getAvailableIds().length} video chưa xem).`;
@@ -675,6 +747,7 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
 
     function refreshDropdown(keepId = '', reloadPlayer = true) {
       const availableIds = getAvailableIds();
+      const pinnedId = getPinnedVideoId();
       videoSelect.innerHTML = '';
 
       if (!availableIds.length) {
@@ -686,6 +759,7 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
         videoSelect.appendChild(opt);
         currentVideoId = '';
         currentTranscript = [];
+        updatePinButtonUI();
         renderOverlayStructure();
         transcriptBox.innerHTML = '';
         exportBox.value = '';
@@ -700,14 +774,19 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
         const tr = info.transcript || [];
         const hasVi = tr.some(line => line.vi && line.vi.trim() !== '');
         const tag = hasVi ? '★ Song ngữ' : (tr.length ? '✓ Pháp' : '✗ Trống');
+        const pinPrefix = (id === pinnedId) ? '📌 ' : '';
         const opt = document.createElement('option');
         opt.value = id;
-        opt.textContent = `[${id}] ${info.title || 'Không tiêu đề'} (${tag})`;
+        opt.textContent = `${pinPrefix}[${id}] ${info.title || 'Không tiêu đề'} (${tag})`;
         videoSelect.appendChild(opt);
       });
 
       if (keepId && availableIds.includes(keepId)) videoSelect.value = keepId;
-      if (reloadPlayer) loadSelectedVideo(videoSelect.value);
+      if (reloadPlayer) {
+        loadSelectedVideo(videoSelect.value);
+      } else {
+        updatePinButtonUI();
+      }
     }
 
     videoSelect.addEventListener('change', () => loadSelectedVideo(videoSelect.value));
@@ -715,6 +794,7 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
     function loadSelectedVideo(id) {
       if (!id || !videoMap[id]) return;
       currentVideoId = id;
+      updatePinButtonUI();
       const item = videoMap[id];
       currentTranscript = item.transcript || [];
       activeIndex = -1;
@@ -851,7 +931,7 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
     window.onYouTubeIframeAPIReady = function () {
       ytPlayer = new YT.Player('ytPlayer', {
         videoId: window.pendingYtId || '',
-        playerVars: { playsinline: 1, fs: 0, rel: 0 }
+        playerVars: { playsinline: 1, fs: 0, rel: 0, cc_load_policy: 0 }
       });
     };
 
