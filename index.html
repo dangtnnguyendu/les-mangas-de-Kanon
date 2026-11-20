@@ -92,6 +92,32 @@
 
     video, #ytPlayer { width: 100%; height: 100%; display: block; }
 
+    /* Nhãn tên nhân vật */
+    .speaker-badge {
+      display: inline-block;
+      background: rgba(255, 152, 0, 0.22);
+      color: #ffb74d;
+      border: 1px solid rgba(255, 183, 77, 0.4);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 1px 7px;
+      border-radius: 4px;
+      margin-bottom: 4px;
+      letter-spacing: 0.3px;
+    }
+    .subtitle-overlay.mode-horizontal .speaker-badge {
+      display: block;
+      width: fit-content;
+      margin: 0 auto 4px;
+    }
+    .v-speaker {
+      display: inline-block;
+      color: #ffb74d;
+      font-size: 9.5px;
+      font-weight: 700;
+      margin-bottom: 2px;
+    }
+
     /* --- CHẾ ĐỘ PHỤ ĐỀ 1: NẰM NGANG Ở ĐÁY VIDEO (MẶC ĐỊNH) --- */
     .subtitle-overlay.mode-horizontal {
       position: absolute;
@@ -200,7 +226,7 @@
     .video-wrapper:fullscreen .v-vi,
     .video-wrapper:-webkit-full-screen .v-vi { font-size: 11px; }
 
-    /* Cách khắc phục 1: Dời 2 nút nổi xuống dưới thanh tiêu đề/chia sẻ YouTube (top: 56px) và tránh xa nút CC ở đáy */
+    /* Dời 2 nút nổi xuống dưới thanh tiêu đề/chia sẻ YouTube (top: 56px) và tránh xa nút CC ở đáy */
     .floating-controls {
       position: absolute;
       top: 56px;
@@ -354,7 +380,7 @@
         <span>2. Dán JSON từ AI vào đây</span>
         <button type="button" class="btn-green" id="saveSubBtn">💾 Lưu vào iPad</button>
       </div>
-      <textarea id="importBox" placeholder='Dán mảng JSON [{"i": 0, "fr": "...", "vi": "..."}] từ AI vào đây rồi bấm Lưu...'></textarea>
+      <textarea id="importBox" placeholder='Dán mảng JSON [{"from_i": 0, "to_i": 1, "speaker": "...", "fr": "...", "vi": "..."}] từ AI vào đây rồi bấm Lưu...'></textarea>
     </div>
   </div>
 
@@ -362,25 +388,23 @@
   <div class="transcript-box" id="transcriptBox"></div>
 
   <script>
-    const AI_PROMPT = `Bạn là chuyên gia biên tập và dịch thuật phụ đề song ngữ Pháp - Việt cho video hội thoại/kể chuyện.
+    const AI_PROMPT = `Bạn là chuyên gia biên tập và dịch thuật phụ đề song ngữ Pháp - Việt cho video truyện tranh hội thoại.
 Dưới đây là thông tin video (link, tiêu đề) và mảng JSON chứa bản chép lời tiếng Pháp tự động (ASR) kèm mốc thời gian.
 
 NHIỆM VỤ CỦA BẠN:
-1. Đánh bóng tiếng Pháp (trường "fr"):
-  - Sửa các lỗi nhận diện giọng nói sai chính tả hoặc đồng âm (đặc biệt là tên riêng nhân vật, địa danh, từ mượn dựa theo ngữ cảnh câu chuyện và tiêu đề video).
-  - Bổ sung dấu câu (chấm, phẩy, hỏi, cảm thán) và viết hoa đúng chuẩn ngữ pháp tiếng Pháp.
-  - Giữ nguyên số lượng dòng và đúng chỉ số "i" của từng dòng để không lệch mốc thời gian.
-2. Dịch sang tiếng Việt (trường "vi"):
-  - Dịch tự nhiên, sát nghĩa, đúng xưng hô và ngữ cảnh của toàn đoạn hội thoại.
-  - Mỗi dòng "vi" phải tương ứng với đúng phần lời thoại ở dòng "fr" cùng chỉ số "i" (nếu một câu dài bị ngắt qua 2-3 mốc thời gian, hãy chia vế dịch tiếng Việt khớp với từng mốc).
-  - Chuyển các thẻ âm thanh như [Musique] -> [Âm nhạc], [Rires] -> [Tiếng cười].
+1. Gộp câu theo từng lượt nói / suy nghĩ của nhân vật:
+  - Gộp các mảnh ASR liên tiếp thuộc cùng một nhân vật thành một đoạn hoàn chỉnh.
+  - Nếu một dòng ASR bị dính lời của 2 nhân vật khác nhau (hoặc dính lời thoại và lời dẫn chuyện), hãy tách thành 2 phần tử riêng biệt và dùng chung chỉ số "from_i" / "to_i" tại điểm giao nhau.
+  - Nếu một nhân vật nói hoặc độc thoại quá dài (trên 3 câu), hãy ngắt thành các đoạn ngắn tự nhiên (1-3 câu/đoạn) để dễ đọc trên màn hình.
+2. Xác định người nói ("speaker"):
+  - Ghi rõ tên nhân vật đang nói hoặc "(Suy nghĩ)" cho lời dẫn chuyện nội tâm (ví dụ: "Kento", "Kento (Suy nghĩ)", "Inamori", "Hội trưởng", "Nhạc"...).
+3. Đánh bóng tiếng Pháp ("fr") & Dịch tiếng Việt ("vi"):
+  - Sửa lỗi chính tả ASR, thêm dấu câu chuẩn ngữ pháp tiếng Pháp.
+  - Dịch sang tiếng Việt tự nhiên, đúng xưng hô theo vai vế nhân vật. Không dùng dấu ngoặc kép (") bên trong chuỗi dịch, thay bằng « ».
 
-ĐỊNH DẠNG ĐẦU RA BẮT BUỘC:
-- Chỉ trả về DUY NHẤT một khối mã JSON hợp lệ theo khuôn mẫu sau, không thêm bất kỳ lời giải thích hay văn bản nào bên ngoài khối JSON:
-
+ĐỊNH DẠNG ĐẦU RA BẮT BUỘC (Chỉ trả về duy nhất 1 khối JSON hợp lệ):
 [
-  {"i": 0, "fr": "Câu tiếng Pháp đã sửa chuẩn.", "vi": "Câu dịch tiếng Việt tương ứng."},
-  {"i": 1, "fr": "Câu tiếp theo...", "vi": "Bản dịch tiếp theo..."}
+  {"from_i": 0, "to_i": 1, "speaker": "Tên nhân vật", "fr": "Đoạn tiếng Pháp hoàn chỉnh.", "vi": "Đoạn dịch tiếng Việt tương ứng."}
 ]
 
 DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
@@ -417,7 +441,6 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
     const videoSelect = document.getElementById('videoSelect');
     const pinBtn = document.getElementById('pinBtn');
     const subtitleOverlay = document.getElementById('subtitleOverlay');
-    const subtitleBox = document.getElementById('subtitleBox');
     const transcriptBox = document.getElementById('transcriptBox');
     const exportBox = document.getElementById('exportBox');
     const importBox = document.getElementById('importBox');
@@ -576,6 +599,7 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
         row.id = 'vsub-' + idx;
 
         let inner = `<span class="v-time">${escapeHtml(item.time || item.start.toFixed(0) + 's')}</span>`;
+        if (item.speaker) inner += `<div class="v-speaker">${escapeHtml(item.speaker)}</div>`;
         if (showFr && fr) inner += `<div class="v-fr">${escapeHtml(fr)}</div>`;
         if (showVi && vi) inner += `<div class="v-vi">${escapeHtml(vi)}</div>`;
 
@@ -822,7 +846,8 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
     // --- COPY PROMPT & LƯU BẢN DỊCH AI VÀO INDEXEDDB ---
     function populateExportBox(item) {
       const url = item.url || `https://www.youtube.com/watch?v=${item.id}`;
-      const compactLines = (item.transcript || []).map((line, idx) => ({
+      const sourceLines = item.raw_transcript || item.transcript || [];
+      const compactLines = sourceLines.map((line, idx) => ({
         i: idx,
         time: line.time || '',
         start: line.start,
@@ -869,36 +894,91 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
         alert('Dữ liệu dán vào chưa đúng chuẩn JSON:\n' + err.message);
         return;
       }
-      if (!Array.isArray(parsed)) {
-        alert('Dữ liệu JSON phải là một danh sách [...] các câu phụ đề.');
+      if (!Array.isArray(parsed) || !parsed.length) {
+        alert('Dữ liệu JSON phải là một danh sách [...] các đoạn phụ đề.');
         return;
       }
 
-      const byIndex = {};
-      parsed.forEach((row, idx) => {
-        const key = typeof row.i === 'number' ? row.i : idx;
-        byIndex[key] = row;
-      });
+      // Giữ bản sao phụ đề ASR gốc để luôn tính đúng mốc thời gian nếu dán lại JSON sau này
+      if (!videoMap[currentVideoId].raw_transcript) {
+        videoMap[currentVideoId].raw_transcript = JSON.parse(JSON.stringify(currentTranscript));
+      }
+      const baseTranscript = videoMap[currentVideoId].raw_transcript;
 
-      let updatedCount = 0;
-      videoMap[currentVideoId].transcript = currentTranscript.map((orig, idx) => {
-        const aiRow = byIndex[idx];
-        if (aiRow) {
-          updatedCount++;
-          return {
-            time: orig.time,
-            start: orig.start,
-            end: orig.end,
-            fr: (aiRow.fr || aiRow.text || orig.fr || orig.text || '').trim(),
-            vi: (aiRow.vi || '').trim()
-          };
+      try {
+        if (navigator.storage && navigator.storage.persist) {
+          await navigator.storage.persist();
         }
-        return orig;
-      });
 
-      await saveToIDB();
-      refreshDropdown(currentVideoId, true);
-      statusEl.textContent = `✓ Đã lưu bản dịch song ngữ (${updatedCount}/${currentTranscript.length} câu) vào bộ nhớ iPad!`;
+        // Hỗ trợ định dạng mới (from_i, to_i, speaker)
+        if (typeof parsed[0].from_i === 'number') {
+          const maxIdx = baseTranscript.length - 1;
+          const blocks = parsed.map((row, bIdx) => {
+            const fIdx = Math.max(0, Math.min(maxIdx, row.from_i));
+            const tIdx = Math.max(fIdx, Math.min(maxIdx, typeof row.to_i === 'number' ? row.to_i : fIdx));
+            const firstLine = baseTranscript[fIdx];
+            const lastLine = baseTranscript[tIdx];
+
+            let start = firstLine.start;
+            let end = lastLine.end;
+
+            // Tự động chia đôi mốc thời gian nếu 2 đoạn liền kề dùng chung 1 dòng ASR ranh giới
+            if (bIdx > 0 && parsed[bIdx - 1].to_i === fIdx) {
+              start = (firstLine.start + firstLine.end) / 2;
+            }
+            if (bIdx < parsed.length - 1 && parsed[bIdx + 1].from_i === tIdx) {
+              end = (lastLine.start + lastLine.end) / 2;
+            }
+
+            return {
+              time: firstLine.time || '',
+              start: Number(start.toFixed(2)),
+              end: Number(end.toFixed(2)),
+              speaker: (row.speaker || '').trim(),
+              fr: (row.fr || '').trim(),
+              vi: (row.vi || '').trim()
+            };
+          });
+
+          videoMap[currentVideoId].transcript = blocks;
+          await saveToIDB();
+          await setPinnedVideoId(currentVideoId);
+          refreshDropdown(currentVideoId, true);
+          statusEl.textContent = `✓ Đã lưu & ghim ${blocks.length} lượt thoại nhân vật vào bộ nhớ iPad!`;
+          return;
+        }
+
+        // Giữ tương thích ngược nếu dán JSON định dạng từng dòng {"i": ...}
+        const byIndex = {};
+        parsed.forEach((row, idx) => {
+          const key = typeof row.i === 'number' ? row.i : idx;
+          byIndex[key] = row;
+        });
+
+        let updatedCount = 0;
+        videoMap[currentVideoId].transcript = baseTranscript.map((orig, idx) => {
+          const aiRow = byIndex[idx];
+          if (aiRow) {
+            updatedCount++;
+            return {
+              time: orig.time,
+              start: orig.start,
+              end: orig.end,
+              speaker: (aiRow.speaker || orig.speaker || '').trim(),
+              fr: (aiRow.fr || aiRow.text || orig.fr || orig.text || '').trim(),
+              vi: (aiRow.vi || '').trim()
+            };
+          }
+          return orig;
+        });
+
+        await saveToIDB();
+        await setPinnedVideoId(currentVideoId);
+        refreshDropdown(currentVideoId, true);
+        statusEl.textContent = `✓ Đã lưu & ghim bản dịch song ngữ (${updatedCount}/${baseTranscript.length} câu) vào bộ nhớ iPad!`;
+      } catch (err) {
+        alert('Không thể lưu vào bộ nhớ iPad (hãy tắt Duyệt web riêng tư hoặc kiểm tra dung lượng máy):\n' + err.message);
+      }
     });
 
     // --- TRÌNH PHÁT & ĐỒNG BỘ PHỤ ĐỀ THỜI GIAN THỰC ---
@@ -950,6 +1030,7 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
         div.innerHTML = `
           <span class="time">${item.time || item.start.toFixed(1) + 's'}</span>
           <div>
+            ${item.speaker ? `<span class="speaker-badge">${escapeHtml(item.speaker)}</span>` : ''}
             <div class="line-fr">${escapeHtml(fr)}</div>
             ${vi ? `<div class="line-vi">${escapeHtml(vi)}</div>` : ''}
           </div>
@@ -991,6 +1072,7 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
             const fr = item.fr || item.text || '';
             const vi = item.vi || '';
             let html = '';
+            if (item.speaker) html += `<div class="speaker-badge">${escapeHtml(item.speaker)}</div>`;
             if (showFr && fr) html += `<div class="sub-fr">${escapeHtml(fr)}</div>`;
             if (showVi && vi) html += `<div class="sub-vi">${escapeHtml(vi)}</div>`;
             box.innerHTML = html;
