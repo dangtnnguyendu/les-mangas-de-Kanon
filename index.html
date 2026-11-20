@@ -118,6 +118,15 @@
       margin-bottom: 2px;
     }
 
+    /* Hiệu ứng Karaoke: Mặc định trắng, đoạn đang nói bôi vàng */
+    .k-seg {
+      color: #ffffff;
+      transition: color 0.1s ease;
+    }
+    .k-seg.active {
+      color: #ffeb3b;
+    }
+
     /* --- CHẾ ĐỘ PHỤ ĐỀ 1: NẰM NGANG Ở ĐÁY VIDEO (MẶC ĐỊNH) --- */
     .subtitle-overlay.mode-horizontal {
       position: absolute;
@@ -138,7 +147,7 @@
       max-width: 100%;
     }
     .subtitle-overlay.mode-horizontal .subtitle-box:empty { display: none; }
-    .sub-fr { color: #ffeb3b; font-size: 20px; font-weight: 600; }
+    .sub-fr { color: #ffffff; font-size: 20px; font-weight: 600; }
     .sub-vi { color: #80deea; font-size: 17px; font-weight: 500; margin-top: 3px; }
 
     .video-wrapper.pseudo-fs .mode-horizontal .sub-fr,
@@ -187,14 +196,14 @@
       margin-bottom: 5px;
       border-radius: 5px;
       cursor: pointer;
-      opacity: 0.65;
+      opacity: 0.6;
       border-left: 2px solid transparent;
       transition: background 0.15s, opacity 0.15s;
     }
     .v-sub-item:active { background: rgba(255, 255, 255, 0.12); }
     .v-sub-item.active {
       opacity: 1;
-      background: rgba(255, 235, 59, 0.18);
+      background: rgba(255, 235, 59, 0.16);
       border-left: 2px solid #ffeb3b;
     }
     .v-time {
@@ -205,7 +214,7 @@
       margin-bottom: 2px;
     }
     .v-fr {
-      color: #ffeb3b;
+      color: #ffffff;
       font-size: 11px;
       font-weight: 600;
       line-height: 1.32;
@@ -276,7 +285,8 @@
     }
     .line:active, .line:hover { background: #2a2a2a; }
     .line.active { background: #332b00; }
-    .line.active .line-fr { color: #ffeb3b; font-weight: 600; }
+    .line-fr { color: #e2e8f0; }
+    .line.active .line-fr { color: #ffffff; font-weight: 600; }
     .time { color: #888; min-width: 48px; font-family: monospace; padding-top: 2px; font-size: 13px; }
     .line-vi { color: #80deea; font-size: 14px; margin-top: 3px; }
 
@@ -429,6 +439,7 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
     let currentVideoId = '';
     let currentTranscript = [];
     let activeIndex = -1;
+    let activeSubIndex = -1;
     let ytPlayer = null;
     let isUsingYouTube = false;
     let showFr = true;
@@ -556,6 +567,117 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
       dbState.videos = Object.values(videoMap);
     }
 
+    // --- TÁCH CÂU HOÀN CHỈNH THÀNH CÁC PHÂN ĐOẠN KARAOKE THEO MỐC THỜI GIAN GỐC ---
+    function findNearestWordBoundary(text, targetPos, minPos) {
+      if (targetPos <= minPos) return minPos;
+      if (targetPos >= text.length) return text.length;
+      if (text[targetPos] === ' ') return targetPos;
+
+      const maxSearch = 18;
+      for (let offset = 1; offset <= maxSearch; offset++) {
+        const right = targetPos + offset;
+        if (right < text.length && text[right] === ' ') return right;
+        const left = targetPos - offset;
+        if (left > minPos && text[left] === ' ') return left;
+      }
+      return targetPos;
+    }
+
+    function buildKaraokeSubs(fullText, subRanges, blockStart, blockEnd) {
+      const cleanText = (fullText || '').trim();
+      if (!cleanText) return [];
+      if (!Array.isArray(subRanges) || subRanges.length <= 1) {
+        return [{ start: blockStart, end: blockEnd, text: cleanText }];
+      }
+
+      const totalWeight = subRanges.reduce((sum, s) => sum + Math.max(1, s.weight || 1), 0);
+      const rawSubs = [];
+      let cursor = 0;
+      let cumWeight = 0;
+
+      for (let k = 0; k < subRanges.length; k++) {
+        const seg = subRanges[k];
+        let sliceText = '';
+
+        if (k === subRanges.length - 1) {
+          sliceText = cleanText.slice(cursor).trim();
+        } else {
+          cumWeight += Math.max(1, seg.weight || 1);
+          const approxPos = Math.round((cumWeight / totalWeight) * cleanText.length);
+          const splitPos = findNearestWordBoundary(cleanText, approxPos, cursor);
+          sliceText = cleanText.slice(cursor, splitPos).trim();
+          cursor = splitPos;
+          while (cursor < cleanText.length && cleanText[cursor] === ' ') cursor++;
+        }
+
+        if (sliceText) {
+          rawSubs.push({
+            start: Number(seg.start.toFixed(2)),
+            end: Number(seg.end.toFixed(2)),
+            text: sliceText
+          });
+        } else if (rawSubs.length > 0) {
+          rawSubs[rawSubs.length - 1].end = Number(seg.end.toFixed(2));
+        }
+      }
+
+      // Nối liền các khoảng hở siêu nhỏ (< 0.35s) trong cùng lượt nói để chữ vàng chạy mượt
+      for (let k = 0; k < rawSubs.length - 1; k++) {
+        if (rawSubs[k + 1].start - rawSubs[k].end < 0.35 && rawSubs[k + 1].start >= rawSubs[k].start) {
+          rawSubs[k].end = rawSubs[k + 1].start;
+        }
+      }
+
+      return rawSubs.length ? rawSubs : [{ start: blockStart, end: blockEnd, text: cleanText }];
+    }
+
+    function ensureTranscriptKaraoke(item) {
+      const tr = item.transcript || [];
+      const raw = item.raw_transcript || [];
+      tr.forEach(block => {
+        if (Array.isArray(block.subs) && block.subs.length > 0) return;
+        const fr = (block.fr || block.text || '').trim();
+        if (!fr) {
+          block.subs = [];
+          return;
+        }
+        if (raw.length > 0) {
+          const matched = raw.filter(r => {
+            const mid = (r.start + r.end) / 2;
+            return mid >= block.start - 0.05 && mid <= block.end + 0.05;
+          });
+          if (matched.length > 1) {
+            const subRanges = matched.map((r, idx) => {
+              const s = idx === 0 ? Math.max(block.start, r.start) : r.start;
+              const e = idx === matched.length - 1 ? Math.min(block.end, r.end) : r.end;
+              const origDur = Math.max(0.1, r.end - r.start);
+              const ratio = Math.max(0.2, Math.min(1, (e - s) / origDur));
+              return {
+                start: s,
+                end: e,
+                weight: ((r.fr || r.text || '').length || 1) * ratio
+              };
+            });
+            block.subs = buildKaraokeSubs(fr, subRanges, block.start, block.end);
+            return;
+          }
+        }
+        block.subs = [{ start: block.start, end: block.end, text: fr }];
+      });
+    }
+
+    function renderKaraokeHtml(item, scopeAttr = '') {
+      const fr = item.fr || item.text || '';
+      if (!fr) return '';
+      const subs = (Array.isArray(item.subs) && item.subs.length)
+        ? item.subs
+        : [{ start: item.start, end: item.end, text: fr }];
+
+      return subs.map((seg, k) =>
+        `<span class="k-seg" ${scopeAttr} data-k="${k}" data-start="${seg.start}">${escapeHtml(seg.text)}</span>`
+      ).join(' ');
+    }
+
     // --- CHUYỂN ĐỔI KIỂU PHỤ ĐỀ: NGANG <-> DỌC ---
     function applyLayoutMode() {
       const isVert = subLayout === 'vertical';
@@ -569,6 +691,7 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
 
       renderOverlayStructure();
       activeIndex = -1;
+      activeSubIndex = -1;
       syncSubtitle(true);
     }
 
@@ -600,13 +723,15 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
 
         let inner = `<span class="v-time">${escapeHtml(item.time || item.start.toFixed(0) + 's')}</span>`;
         if (item.speaker) inner += `<div class="v-speaker">${escapeHtml(item.speaker)}</div>`;
-        if (showFr && fr) inner += `<div class="v-fr">${escapeHtml(fr)}</div>`;
+        if (showFr && fr) inner += `<div class="v-fr">${renderKaraokeHtml(item, `data-v-idx="${idx}"`)}</div>`;
         if (showVi && vi) inner += `<div class="v-vi">${escapeHtml(vi)}</div>`;
 
         row.innerHTML = inner;
         row.onclick = (e) => {
           e.stopPropagation();
-          seekTo(item.start);
+          const kSpan = e.target.closest('.k-seg');
+          const targetTime = kSpan ? Number(kSpan.dataset.start) : item.start;
+          seekTo(targetTime);
         };
         subtitleOverlay.appendChild(row);
       });
@@ -694,6 +819,7 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
       toggleFrBtn.className = showFr ? 'btn-blue' : 'btn-off';
       if (subLayout === 'vertical') renderOverlayStructure();
       activeIndex = -1;
+      activeSubIndex = -1;
       syncSubtitle(true);
     });
 
@@ -703,6 +829,7 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
       toggleViBtn.className = showVi ? 'btn-blue' : 'btn-off';
       if (subLayout === 'vertical') renderOverlayStructure();
       activeIndex = -1;
+      activeSubIndex = -1;
       syncSubtitle(true);
     });
 
@@ -820,8 +947,10 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
       currentVideoId = id;
       updatePinButtonUI();
       const item = videoMap[id];
+      ensureTranscriptKaraoke(item);
       currentTranscript = item.transcript || [];
       activeIndex = -1;
+      activeSubIndex = -1;
       importBox.value = '';
 
       renderOverlayStructure();
@@ -899,7 +1028,7 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
         return;
       }
 
-      // Giữ bản sao phụ đề ASR gốc để luôn tính đúng mốc thời gian nếu dán lại JSON sau này
+      // Giữ bản sao phụ đề ASR gốc để luôn tính đúng mốc thời gian Karaoke nếu dán lại JSON sau này
       if (!videoMap[currentVideoId].raw_transcript) {
         videoMap[currentVideoId].raw_transcript = JSON.parse(JSON.stringify(currentTranscript));
       }
@@ -910,7 +1039,7 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
           await navigator.storage.persist();
         }
 
-        // Hỗ trợ định dạng mới (from_i, to_i, speaker)
+        // Hỗ trợ định dạng mới (from_i, to_i, speaker) kèm mốc thời gian Karaoke từng đoạn nhỏ
         if (typeof parsed[0].from_i === 'number') {
           const maxIdx = baseTranscript.length - 1;
           const blocks = parsed.map((row, bIdx) => {
@@ -921,22 +1050,48 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
 
             let start = firstLine.start;
             let end = lastLine.end;
+            const splitAtStart = bIdx > 0 && parsed[bIdx - 1].to_i === fIdx;
+            const splitAtEnd = bIdx < parsed.length - 1 && parsed[bIdx + 1].from_i === tIdx;
 
-            // Tự động chia đôi mốc thời gian nếu 2 đoạn liền kề dùng chung 1 dòng ASR ranh giới
-            if (bIdx > 0 && parsed[bIdx - 1].to_i === fIdx) {
+            if (splitAtStart) {
               start = (firstLine.start + firstLine.end) / 2;
             }
-            if (bIdx < parsed.length - 1 && parsed[bIdx + 1].from_i === tIdx) {
+            if (splitAtEnd) {
               end = (lastLine.start + lastLine.end) / 2;
             }
 
+            // Tạo danh sách các khoảng thời gian con từ fIdx -> tIdx để chạy màu Karaoke
+            const subRanges = [];
+            for (let k = fIdx; k <= tIdx; k++) {
+              const origLine = baseTranscript[k];
+              let s = origLine.start;
+              let e = origLine.end;
+              let weight = (origLine.fr || origLine.text || '').length || 1;
+
+              if (k === fIdx && splitAtStart) {
+                s = start;
+                weight *= 0.5;
+              }
+              if (k === tIdx && splitAtEnd) {
+                e = end;
+                weight *= 0.5;
+              }
+              if (e < s) e = s;
+              subRanges.push({ start: s, end: e, weight });
+            }
+
+            const frText = (row.fr || '').trim();
+            const blockStart = Number(start.toFixed(2));
+            const blockEnd = Number(end.toFixed(2));
+
             return {
               time: firstLine.time || '',
-              start: Number(start.toFixed(2)),
-              end: Number(end.toFixed(2)),
+              start: blockStart,
+              end: blockEnd,
               speaker: (row.speaker || '').trim(),
-              fr: (row.fr || '').trim(),
-              vi: (row.vi || '').trim()
+              fr: frText,
+              vi: (row.vi || '').trim(),
+              subs: buildKaraokeSubs(frText, subRanges, blockStart, blockEnd)
             };
           });
 
@@ -944,7 +1099,7 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
           await saveToIDB();
           await setPinnedVideoId(currentVideoId);
           refreshDropdown(currentVideoId, true);
-          statusEl.textContent = `✓ Đã lưu & ghim ${blocks.length} lượt thoại nhân vật vào bộ nhớ iPad!`;
+          statusEl.textContent = `✓ Đã lưu & ghim ${blocks.length} lượt thoại Karaoke vào bộ nhớ iPad!`;
           return;
         }
 
@@ -960,13 +1115,15 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
           const aiRow = byIndex[idx];
           if (aiRow) {
             updatedCount++;
+            const frText = (aiRow.fr || aiRow.text || orig.fr || orig.text || '').trim();
             return {
               time: orig.time,
               start: orig.start,
               end: orig.end,
               speaker: (aiRow.speaker || orig.speaker || '').trim(),
-              fr: (aiRow.fr || aiRow.text || orig.fr || orig.text || '').trim(),
-              vi: (aiRow.vi || '').trim()
+              fr: frText,
+              vi: (aiRow.vi || '').trim(),
+              subs: [{ start: orig.start, end: orig.end, text: frText }]
             };
           }
           return orig;
@@ -981,7 +1138,7 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
       }
     });
 
-    // --- TRÌNH PHÁT & ĐỒNG BỘ PHỤ ĐỀ THỜI GIAN THỰC ---
+    // --- TRÌNH PHÁT & ĐỒNG BỘ PHỤ ĐỀ KARAOKE THỜI GIAN THỰC ---
     function switchToHtml5(src) {
       isUsingYouTube = false;
       if (ytPlayer?.stopVideo) ytPlayer.stopVideo();
@@ -1031,11 +1188,15 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
           <span class="time">${item.time || item.start.toFixed(1) + 's'}</span>
           <div>
             ${item.speaker ? `<span class="speaker-badge">${escapeHtml(item.speaker)}</span>` : ''}
-            <div class="line-fr">${escapeHtml(fr)}</div>
+            <div class="line-fr">${renderKaraokeHtml(item, `data-l-idx="${idx}"`)}</div>
             ${vi ? `<div class="line-vi">${escapeHtml(vi)}</div>` : ''}
           </div>
         `;
-        div.onclick = () => seekTo(item.start);
+        div.onclick = (e) => {
+          const kSpan = e.target.closest('.k-seg');
+          const targetTime = kSpan ? Number(kSpan.dataset.start) : item.start;
+          seekTo(targetTime);
+        };
         transcriptBox.appendChild(div);
       });
     }
@@ -1050,6 +1211,15 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
       }
     }
 
+    function updateKaraokeHighlight(blockIdx, subIdx) {
+      document.querySelectorAll('.k-seg.active').forEach(el => el.classList.remove('active'));
+      if (blockIdx === -1 || subIdx === -1) return;
+
+      document.querySelectorAll(`#subtitleBox .k-seg[data-k="${subIdx}"]`).forEach(el => el.classList.add('active'));
+      document.querySelectorAll(`.k-seg[data-v-idx="${blockIdx}"][data-k="${subIdx}"]`).forEach(el => el.classList.add('active'));
+      document.querySelectorAll(`.k-seg[data-l-idx="${blockIdx}"][data-k="${subIdx}"]`).forEach(el => el.classList.add('active'));
+    }
+
     function syncSubtitle(forceRender = false) {
       if (!currentTranscript.length) return;
       const currentTime = (isUsingYouTube && ytPlayer?.getCurrentTime)
@@ -1057,33 +1227,36 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
         : html5Video.currentTime;
 
       const idx = currentTranscript.findIndex(item => currentTime >= item.start && currentTime <= item.end);
-      if (idx !== activeIndex || forceRender) {
+      const turnChanged = idx !== activeIndex || forceRender;
+
+      if (turnChanged) {
         if (activeIndex !== -1) {
           document.getElementById('line-' + activeIndex)?.classList.remove('active');
           document.getElementById('vsub-' + activeIndex)?.classList.remove('active');
         }
         activeIndex = idx;
+        activeSubIndex = -1;
 
         if (subLayout === 'horizontal') {
           const box = document.getElementById('subtitleBox');
-          if (!box) return;
-          if (idx !== -1) {
-            const item = currentTranscript[idx];
-            const fr = item.fr || item.text || '';
-            const vi = item.vi || '';
-            let html = '';
-            if (item.speaker) html += `<div class="speaker-badge">${escapeHtml(item.speaker)}</div>`;
-            if (showFr && fr) html += `<div class="sub-fr">${escapeHtml(fr)}</div>`;
-            if (showVi && vi) html += `<div class="sub-vi">${escapeHtml(vi)}</div>`;
-            box.innerHTML = html;
-          } else {
-            box.innerHTML = '';
+          if (box) {
+            if (idx !== -1) {
+              const item = currentTranscript[idx];
+              const fr = item.fr || item.text || '';
+              const vi = item.vi || '';
+              let html = '';
+              if (item.speaker) html += `<div class="speaker-badge">${escapeHtml(item.speaker)}</div>`;
+              if (showFr && fr) html += `<div class="sub-fr">${renderKaraokeHtml(item)}</div>`;
+              if (showVi && vi) html += `<div class="sub-vi">${escapeHtml(vi)}</div>`;
+              box.innerHTML = html;
+            } else {
+              box.innerHTML = '';
+            }
           }
         } else if (idx !== -1) {
           const activeVSub = document.getElementById('vsub-' + idx);
           if (activeVSub) {
             activeVSub.classList.add('active');
-            // Cuộn mượt bên trong khung dọc bên phải để câu đang nói nằm giữa
             const targetScroll = activeVSub.offsetTop - (subtitleOverlay.clientHeight / 2) + (activeVSub.clientHeight / 2);
             subtitleOverlay.scrollTo({ top: Math.max(0, targetScroll), behavior: forceRender ? 'auto' : 'smooth' });
           }
@@ -1096,6 +1269,18 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
             if (!forceRender) activeLine.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
           }
         }
+      }
+
+      // Cập nhật phần cụm từ bôi vàng Karaoke bên trong lượt thoại đang chạy
+      let subIdx = -1;
+      if (idx !== -1) {
+        const subs = currentTranscript[idx].subs || [];
+        subIdx = subs.findIndex(s => currentTime >= s.start && currentTime <= s.end);
+      }
+
+      if (turnChanged || subIdx !== activeSubIndex) {
+        activeSubIndex = subIdx;
+        updateKaraokeHighlight(idx, subIdx);
       }
     }
 
