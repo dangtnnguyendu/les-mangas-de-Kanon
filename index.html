@@ -118,7 +118,7 @@
       margin-bottom: 2px;
     }
 
-    /* Hiệu ứng Karaoke: Mặc định trắng, đoạn đang nói bôi vàng */
+    /* Hiệu ứng Karaoke: Mặc định trắng, đoạn đang nói bôi vàng cho cả Pháp & Việt */
     .k-seg {
       color: #ffffff;
       transition: color 0.1s ease;
@@ -148,7 +148,7 @@
     }
     .subtitle-overlay.mode-horizontal .subtitle-box:empty { display: none; }
     .sub-fr { color: #ffffff; font-size: 20px; font-weight: 600; }
-    .sub-vi { color: #80deea; font-size: 17px; font-weight: 500; margin-top: 3px; }
+    .sub-vi { color: #ffffff; font-size: 17px; font-weight: 500; margin-top: 4px; }
 
     .video-wrapper.pseudo-fs .mode-horizontal .sub-fr,
     .video-wrapper:fullscreen .mode-horizontal .sub-fr,
@@ -221,7 +221,7 @@
       word-break: break-word;
     }
     .v-vi {
-      color: #80deea;
+      color: #ffffff;
       font-size: 10px;
       font-weight: 400;
       line-height: 1.3;
@@ -285,10 +285,11 @@
     }
     .line:active, .line:hover { background: #2a2a2a; }
     .line.active { background: #332b00; }
-    .line-fr { color: #e2e8f0; }
-    .line.active .line-fr { color: #ffffff; font-weight: 600; }
+    .line-fr { color: #ffffff; }
+    .line.active .line-fr { font-weight: 600; }
     .time { color: #888; min-width: 48px; font-family: monospace; padding-top: 2px; font-size: 13px; }
-    .line-vi { color: #80deea; font-size: 14px; margin-top: 3px; }
+    .line-vi { color: #ffffff; font-size: 14px; margin-top: 4px; opacity: 0.92; }
+    .line.active .line-vi { opacity: 1; }
 
     .ai-grid {
       display: grid;
@@ -567,7 +568,7 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
       dbState.videos = Object.values(videoMap);
     }
 
-    // --- TÁCH CÂU HOÀN CHỈNH THÀNH CÁC PHÂN ĐOẠN KARAOKE THEO MỐC THỜI GIAN GỐC ---
+    // --- TÁCH CÂU PHÁP & VIỆT THÀNH CÁC PHÂN ĐOẠN KARAOKE ĐỒNG BỘ ---
     function findNearestWordBoundary(text, targetPos, minPos) {
       if (targetPos <= minPos) return minPos;
       if (targetPos >= text.length) return text.length;
@@ -583,61 +584,103 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
       return targetPos;
     }
 
-    function buildKaraokeSubs(fullText, subRanges, blockStart, blockEnd) {
+    function splitTextIntoExactParts(fullText, weights) {
       const cleanText = (fullText || '').trim();
-      if (!cleanText) return [];
-      if (!Array.isArray(subRanges) || subRanges.length <= 1) {
-        return [{ start: blockStart, end: blockEnd, text: cleanText }];
-      }
+      const count = Array.isArray(weights) ? weights.length : 0;
+      if (count <= 0) return [];
+      if (!cleanText) return new Array(count).fill('');
+      if (count === 1) return [cleanText];
 
-      const totalWeight = subRanges.reduce((sum, s) => sum + Math.max(1, s.weight || 1), 0);
-      const rawSubs = [];
+      const totalWeight = weights.reduce((sum, w) => sum + Math.max(1, w || 1), 0);
+      const parts = [];
       let cursor = 0;
       let cumWeight = 0;
 
-      for (let k = 0; k < subRanges.length; k++) {
-        const seg = subRanges[k];
-        let sliceText = '';
-
-        if (k === subRanges.length - 1) {
-          sliceText = cleanText.slice(cursor).trim();
+      for (let k = 0; k < count; k++) {
+        if (k === count - 1) {
+          parts.push(cleanText.slice(cursor).trim());
         } else {
-          cumWeight += Math.max(1, seg.weight || 1);
+          cumWeight += Math.max(1, weights[k] || 1);
           const approxPos = Math.round((cumWeight / totalWeight) * cleanText.length);
           const splitPos = findNearestWordBoundary(cleanText, approxPos, cursor);
-          sliceText = cleanText.slice(cursor, splitPos).trim();
+          parts.push(cleanText.slice(cursor, splitPos).trim());
           cursor = splitPos;
           while (cursor < cleanText.length && cleanText[cursor] === ' ') cursor++;
         }
+      }
+      return parts;
+    }
 
-        if (sliceText) {
-          rawSubs.push({
+    function buildKaraokeSubs(frText, viText, subRanges, blockStart, blockEnd) {
+      const cleanFr = (frText || '').trim();
+      const cleanVi = (viText || '').trim();
+      if (!cleanFr && !cleanVi) return [];
+
+      if (!Array.isArray(subRanges) || subRanges.length <= 1) {
+        return [{ start: blockStart, end: blockEnd, text: cleanFr, vi: cleanVi }];
+      }
+
+      const weights = subRanges.map(s => Math.max(1, s.weight || 1));
+      const frRawParts = splitTextIntoExactParts(cleanFr, weights);
+      const mergedSubs = [];
+
+      for (let k = 0; k < subRanges.length; k++) {
+        const seg = subRanges[k];
+        const sliceFr = frRawParts[k] || '';
+
+        if (sliceFr || !cleanFr) {
+          mergedSubs.push({
             start: Number(seg.start.toFixed(2)),
             end: Number(seg.end.toFixed(2)),
-            text: sliceText
+            text: sliceFr
           });
-        } else if (rawSubs.length > 0) {
-          rawSubs[rawSubs.length - 1].end = Number(seg.end.toFixed(2));
+        } else if (mergedSubs.length > 0) {
+          mergedSubs[mergedSubs.length - 1].end = Number(seg.end.toFixed(2));
         }
       }
 
       // Nối liền các khoảng hở siêu nhỏ (< 0.35s) trong cùng lượt nói để chữ vàng chạy mượt
-      for (let k = 0; k < rawSubs.length - 1; k++) {
-        if (rawSubs[k + 1].start - rawSubs[k].end < 0.35 && rawSubs[k + 1].start >= rawSubs[k].start) {
-          rawSubs[k].end = rawSubs[k + 1].start;
+      for (let k = 0; k < mergedSubs.length - 1; k++) {
+        if (mergedSubs[k + 1].start - mergedSubs[k].end < 0.35 && mergedSubs[k + 1].start >= mergedSubs[k].start) {
+          mergedSubs[k].end = mergedSubs[k + 1].start;
         }
       }
 
-      return rawSubs.length ? rawSubs : [{ start: blockStart, end: blockEnd, text: cleanText }];
+      if (!mergedSubs.length) {
+        return [{ start: blockStart, end: blockEnd, text: cleanFr, vi: cleanVi }];
+      }
+
+      // Chia đoạn tiếng Việt thành đúng số phân đoạn của tiếng Pháp để bôi vàng khớp nhịp
+      const viWeights = mergedSubs.map(s => (s.text || '').length || Math.max(0.1, s.end - s.start));
+      const viParts = splitTextIntoExactParts(cleanVi, viWeights);
+
+      return mergedSubs.map((s, idx) => ({
+        start: s.start,
+        end: s.end,
+        text: s.text,
+        vi: viParts[idx] || ''
+      }));
     }
 
     function ensureTranscriptKaraoke(item) {
       const tr = item.transcript || [];
       const raw = item.raw_transcript || [];
       tr.forEach(block => {
-        if (Array.isArray(block.subs) && block.subs.length > 0) return;
         const fr = (block.fr || block.text || '').trim();
-        if (!fr) {
+        const vi = (block.vi || '').trim();
+
+        // Nếu đã có subs từ bản trước nhưng chưa có trường vi cho từng đoạn nhỏ, tự bổ sung ngay
+        if (Array.isArray(block.subs) && block.subs.length > 0) {
+          const needsViSplit = vi && block.subs.every(s => s.vi === undefined);
+          if (needsViSplit) {
+            const viWeights = block.subs.map(s => (s.text || '').length || Math.max(0.1, s.end - s.start));
+            const viParts = splitTextIntoExactParts(vi, viWeights);
+            block.subs.forEach((s, idx) => { s.vi = viParts[idx] || ''; });
+          }
+          return;
+        }
+
+        if (!fr && !vi) {
           block.subs = [];
           return;
         }
@@ -658,24 +701,40 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
                 weight: ((r.fr || r.text || '').length || 1) * ratio
               };
             });
-            block.subs = buildKaraokeSubs(fr, subRanges, block.start, block.end);
+            block.subs = buildKaraokeSubs(fr, vi, subRanges, block.start, block.end);
             return;
           }
         }
-        block.subs = [{ start: block.start, end: block.end, text: fr }];
+        block.subs = [{ start: block.start, end: block.end, text: fr, vi }];
       });
     }
 
-    function renderKaraokeHtml(item, scopeAttr = '') {
+    function renderKaraokeFrHtml(item, scopeAttr = '') {
       const fr = item.fr || item.text || '';
       if (!fr) return '';
       const subs = (Array.isArray(item.subs) && item.subs.length)
         ? item.subs
         : [{ start: item.start, end: item.end, text: fr }];
 
-      return subs.map((seg, k) =>
-        `<span class="k-seg" ${scopeAttr} data-k="${k}" data-start="${seg.start}">${escapeHtml(seg.text)}</span>`
-      ).join(' ');
+      return subs.map((seg, k) => {
+        const segText = seg.text !== undefined ? seg.text : (k === 0 ? fr : '');
+        if (!segText) return '';
+        return `<span class="k-seg" ${scopeAttr} data-k="${k}" data-start="${seg.start}">${escapeHtml(segText)}</span>`;
+      }).filter(Boolean).join(' ');
+    }
+
+    function renderKaraokeViHtml(item, scopeAttr = '') {
+      const vi = item.vi || '';
+      if (!vi) return '';
+      const subs = (Array.isArray(item.subs) && item.subs.length)
+        ? item.subs
+        : [{ start: item.start, end: item.end, vi }];
+
+      return subs.map((seg, k) => {
+        const segVi = seg.vi !== undefined ? seg.vi : (k === 0 ? vi : '');
+        if (!segVi) return '';
+        return `<span class="k-seg" ${scopeAttr} data-k="${k}" data-start="${seg.start}">${escapeHtml(segVi)}</span>`;
+      }).filter(Boolean).join(' ');
     }
 
     // --- CHUYỂN ĐỔI KIỂU PHỤ ĐỀ: NGANG <-> DỌC ---
@@ -723,8 +782,8 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
 
         let inner = `<span class="v-time">${escapeHtml(item.time || item.start.toFixed(0) + 's')}</span>`;
         if (item.speaker) inner += `<div class="v-speaker">${escapeHtml(item.speaker)}</div>`;
-        if (showFr && fr) inner += `<div class="v-fr">${renderKaraokeHtml(item, `data-v-idx="${idx}"`)}</div>`;
-        if (showVi && vi) inner += `<div class="v-vi">${escapeHtml(vi)}</div>`;
+        if (showFr && fr) inner += `<div class="v-fr">${renderKaraokeFrHtml(item, `data-v-idx="${idx}"`)}</div>`;
+        if (showVi && vi) inner += `<div class="v-vi">${renderKaraokeViHtml(item, `data-v-idx="${idx}"`)}</div>`;
 
         row.innerHTML = inner;
         row.onclick = (e) => {
@@ -1081,6 +1140,7 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
             }
 
             const frText = (row.fr || '').trim();
+            const viText = (row.vi || '').trim();
             const blockStart = Number(start.toFixed(2));
             const blockEnd = Number(end.toFixed(2));
 
@@ -1090,8 +1150,8 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
               end: blockEnd,
               speaker: (row.speaker || '').trim(),
               fr: frText,
-              vi: (row.vi || '').trim(),
-              subs: buildKaraokeSubs(frText, subRanges, blockStart, blockEnd)
+              vi: viText,
+              subs: buildKaraokeSubs(frText, viText, subRanges, blockStart, blockEnd)
             };
           });
 
@@ -1116,14 +1176,15 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
           if (aiRow) {
             updatedCount++;
             const frText = (aiRow.fr || aiRow.text || orig.fr || orig.text || '').trim();
+            const viText = (aiRow.vi || '').trim();
             return {
               time: orig.time,
               start: orig.start,
               end: orig.end,
               speaker: (aiRow.speaker || orig.speaker || '').trim(),
               fr: frText,
-              vi: (aiRow.vi || '').trim(),
-              subs: [{ start: orig.start, end: orig.end, text: frText }]
+              vi: viText,
+              subs: [{ start: orig.start, end: orig.end, text: frText, vi: viText }]
             };
           }
           return orig;
@@ -1188,8 +1249,8 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
           <span class="time">${item.time || item.start.toFixed(1) + 's'}</span>
           <div>
             ${item.speaker ? `<span class="speaker-badge">${escapeHtml(item.speaker)}</span>` : ''}
-            <div class="line-fr">${renderKaraokeHtml(item, `data-l-idx="${idx}"`)}</div>
-            ${vi ? `<div class="line-vi">${escapeHtml(vi)}</div>` : ''}
+            <div class="line-fr">${renderKaraokeFrHtml(item, `data-l-idx="${idx}"`)}</div>
+            ${vi ? `<div class="line-vi">${renderKaraokeViHtml(item, `data-l-idx="${idx}"`)}</div>` : ''}
           </div>
         `;
         div.onclick = (e) => {
@@ -1246,8 +1307,8 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
               const vi = item.vi || '';
               let html = '';
               if (item.speaker) html += `<div class="speaker-badge">${escapeHtml(item.speaker)}</div>`;
-              if (showFr && fr) html += `<div class="sub-fr">${renderKaraokeHtml(item)}</div>`;
-              if (showVi && vi) html += `<div class="sub-vi">${escapeHtml(vi)}</div>`;
+              if (showFr && fr) html += `<div class="sub-fr">${renderKaraokeFrHtml(item)}</div>`;
+              if (showVi && vi) html += `<div class="sub-vi">${renderKaraokeViHtml(item)}</div>`;
               box.innerHTML = html;
             } else {
               box.innerHTML = '';
@@ -1271,7 +1332,7 @@ DỮ LIỆU VIDEO VÀ PHỤ ĐỀ THÔ CẦN XỬ LÝ:`;
         }
       }
 
-      // Cập nhật phần cụm từ bôi vàng Karaoke bên trong lượt thoại đang chạy
+      // Cập nhật phần cụm từ bôi vàng Karaoke cho cả tiếng Pháp & tiếng Việt trong lượt thoại đang chạy
       let subIdx = -1;
       if (idx !== -1) {
         const subs = currentTranscript[idx].subs || [];
